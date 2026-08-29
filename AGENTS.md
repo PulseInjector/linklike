@@ -1,22 +1,59 @@
 # Linklike — agent notes
 
-Editable project files (user learning directories):
+## Repository map
+
+| Path                        | Purpose                                              |
+| --------------------------- | ---------------------------------------------------- |
+| `packages/protocol/`        | Zod schemas for project, graph, and progress         |
+| `packages/core/`            | Read/write and validate learning project directories |
+| `packages/cli/`             | `linklike` CLI                                       |
+| `apps/web/`                 | Browser UI (Vite + React)                            |
+| `fixtures/minimal-project/` | Golden project; must pass `pnpm validate`            |
+| `.github/`                  | CI, issue templates, pull request template           |
+| `CONTRIBUTING.md`           | Contribution workflow; which issue template to use   |
+
+## CI (mandatory)
+
+Do not treat "pushed a fix" or "opened a PR" as done until checks pass.
+
+1. Run `pnpm check` locally before every push.
+2. On pull requests, watch GitHub Actions until the `check` job is green.
+3. Fix root causes; do not disable checks to merge.
+
+## Issues and pull requests
+
+When creating GitHub issues, use the forms in `.github/ISSUE_TEMPLATE/` and follow [CONTRIBUTING.md](CONTRIBUTING.md).
+
+- Bugs → `bug_report.yml` (`[BUG]` title prefix)
+- Features → `feature_request.yml` (`[FEATURE]`)
+- Improvements → `improvement.yml` (`[IMPROVEMENT]`)
+
+Do not invent ad-hoc issue formats. Do not commit planning drafts under `docs/`.
+
+Open pull requests for changes to this repository; do not push directly to `main`.
+
+## User learning projects (on disk)
+
+Editable files in a user's learning directory:
 
 - `project.json`
 - `plan.graph.json`
 - `progress.json`
 - `nodes/<nodeId>.mdx`
 
-After changes, run:
+After changes to protocol or fixtures, run:
 
 ```bash
 pnpm check
 ```
 
-Or from a user project directory:
+From a user project directory:
 
 ```bash
 linklike validate --json .
 ```
 
-Do not add narrative comments to source code. Do not commit planning drafts under `docs/`.
+## Code style
+
+- Do not add narrative comments to source code.
+- Match existing formatting; `pnpm format:check` must pass.
