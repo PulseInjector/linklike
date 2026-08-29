@@ -148,12 +148,114 @@ button.secondary {
   white-space: nowrap;
 }
 
+.workspace {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
 .map {
   flex: 1;
   min-height: 0;
+  min-width: 0;
 }
 
 .react-flow {
   background: var(--bg);
+}
+
+.drawer {
+  width: 24rem;
+  max-width: 90vw;
+  border-left: 1px solid var(--border);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.drawer-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.drawer-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.drawer-close {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+}
+
+.drawer-status {
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.status-btn {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.status-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.drawer-body {
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.markdown {
+  line-height: 1.6;
+  word-wrap: break-word;
+}
+
+.markdown h1 {
+  font-size: 1.3rem;
+}
+
+.markdown h2 {
+  font-size: 1.1rem;
+}
+
+.markdown pre {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  overflow-x: auto;
+}
+
+.markdown code {
+  background: var(--bg);
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.markdown pre code {
+  padding: 0;
+  background: transparent;
 }
 

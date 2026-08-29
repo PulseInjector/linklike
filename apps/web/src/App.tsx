@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 
+import type { Progress, ProgressStatus } from "@linklike/protocol";
+
 import { ApiError, fetchProject, type ProjectData } from "./api";
 import { Map } from "./Map";
+import { NodeDrawer } from "./NodeDrawer";
 import "./App.css";
 
 function readPathFromUrl(): string {
@@ -70,6 +73,10 @@ export function App() {
     writePathToUrl("");
   };
 
+  const onProgressUpdated = (progress: Progress) => {
+    setData((prev) => (prev ? { ...prev, progress } : prev));
+  };
+
   if (data) {
     return (
       <ProjectView
@@ -77,6 +84,8 @@ export function App() {
         path={path}
         selectedId={selectedId}
         onSelect={setSelectedId}
+        onCloseNode={() => setSelectedId(null)}
+        onProgressUpdated={onProgressUpdated}
         onOpenAnother={onOpenAnother}
         onReload={() => void load(path)}
       />
@@ -125,6 +134,8 @@ function ProjectView({
   path,
   selectedId,
   onSelect,
+  onCloseNode,
+  onProgressUpdated,
   onOpenAnother,
   onReload,
 }: {
@@ -132,9 +143,18 @@ function ProjectView({
   path: string;
   selectedId: string | null;
   onSelect: (nodeId: string) => void;
+  onCloseNode: () => void;
+  onProgressUpdated: (progress: Progress) => void;
   onOpenAnother: () => void;
   onReload: () => void;
 }) {
+  const selectedNode = selectedId
+    ? (data.graph.nodes.find((node) => node.id === selectedId) ?? null)
+    : null;
+  const selectedStatus: ProgressStatus | null = selectedId
+    ? (data.progress.entries[selectedId]?.status ?? null)
+    : null;
+
   return (
     <div className="project">
       <header className="topbar">
@@ -151,13 +171,34 @@ function ProjectView({
           </button>
         </div>
       </header>
-      <div className="map">
-        <Map
-          graph={data.graph}
-          progress={data.progress}
-          selectedId={selectedId}
-          onSelect={onSelect}
-        />
+      <div className="workspace">
+        <div className="map">
+          <Map
+            graph={data.graph}
+            progress={data.progress}
+            selectedId={selectedId}
+            onSelect={onSelect}
+          />
+        </div>
+        {selectedNode && (
+          <NodeDrawer
+            key={selectedNode.id}
+            path={path}
+            nodeId={selectedNode.id}
+            title={selectedNode.title}
+            status={selectedStatus}
+            onStatusChange={(next) => {
+              onProgressUpdated({
+                ...data.progress,
+                entries: {
+                  ...data.progress.entries,
+                  [selectedNode.id]: { status: next },
+                },
+              });
+            }}
+            onClose={onCloseNode}
+          />
+        )}
       </div>
     </div>
   );

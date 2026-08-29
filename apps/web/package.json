@@ -16,7 +16,8 @@
     "@linklike/protocol": "workspace:*",
     "@xyflow/react": "^12.11.5",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "react-markdown": "^10.1.0"
   },
   "devDependencies": {
     "@types/react": "^19.1.12",
