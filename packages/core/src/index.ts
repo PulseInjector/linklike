@@ -40,6 +40,25 @@ async function readJson(filePath: string): Promise<unknown> {
   return JSON.parse(raw) as unknown;
 }
 
+const projectLocks = new Map<string, Promise<unknown>>();
+
+function withProjectLock<T>(
+  projectDir: string,
+  operation: () => Promise<T>,
+): Promise<T> {
+  const key = path.resolve(projectDir);
+  const previous = projectLocks.get(key) ?? Promise.resolve();
+  const run = previous.then(operation, operation);
+  projectLocks.set(
+    key,
+    run.then(
+      () => undefined,
+      () => undefined,
+    ),
+  );
+  return run;
+}
+
 function projectPaths(projectDir: string) {
   return {
     projectPath: path.join(projectDir, "project.json"),
@@ -173,13 +192,13 @@ export async function setProgress(
   }
 
   const { progressPath } = projectPaths(projectDir);
-  const progress = progressSchema.parse(await readJson(progressPath));
 
-  progress.entries[nodeId] = { status: status as ProgressStatus };
-
-  await writeFile(progressPath, `${JSON.stringify(progress, null, 2)}\n`);
-
-  return progress;
+  return withProjectLock(projectDir, async () => {
+    const progress = progressSchema.parse(await readJson(progressPath));
+    progress.entries[nodeId] = { status: status as ProgressStatus };
+    await writeFile(progressPath, `${JSON.stringify(progress, null, 2)}\n`);
+    return progress;
+  });
 }
 
 export interface AddNodeOptions {
@@ -210,47 +229,58 @@ export async function addNode(
     throw new Error("title must not be empty");
   }
 
-  const { graphPath } = projectPaths(projectDir);
-  const graph = planGraphSchema.parse(await readJson(graphPath));
+  return withProjectLock(projectDir, async () => {
+    const existingProject = await validateProjectDir(projectDir);
+    if (!existingProject.ok) {
+      throw new Error(
+        `project is invalid: ${existingProject.issues
+          .map((issue) => issue.message)
+          .join("; ")}`,
+      );
+    }
 
-  if (options.parent && !graph.nodes.some((node) => node.id === options.parent)) {
-    throw new Error(`unknown parent node: ${options.parent}`);
-  }
+    const { graphPath } = projectPaths(projectDir);
+    const graph = planGraphSchema.parse(await readJson(graphPath));
 
-  const base = slugify(title) || "node";
-  const existing = new Set(graph.nodes.map((node) => node.id));
-  let id = base;
-  let suffix = 2;
-  while (existing.has(id)) {
-    id = `${base}-${suffix}`;
-    suffix += 1;
-  }
+    if (options.parent && !graph.nodes.some((node) => node.id === options.parent)) {
+      throw new Error(`unknown parent node: ${options.parent}`);
+    }
 
-  const nextGraph: PlanGraph = {
-    ...graph,
-    nodes: [...graph.nodes, { id, title }],
-    edges: options.parent
-      ? [...graph.edges, { from: options.parent, to: id }]
-      : [...graph.edges],
-  };
+    const base = slugify(title) || "node";
+    const existing = new Set(graph.nodes.map((node) => node.id));
+    let id = base;
+    let suffix = 2;
+    while (existing.has(id)) {
+      id = `${base}-${suffix}`;
+      suffix += 1;
+    }
 
-  const validated = planGraphSchema.parse(nextGraph);
-  const integrityErrors = validateGraphIntegrity(validated);
-  if (integrityErrors.length > 0) {
-    throw new Error(integrityErrors.join("; "));
-  }
+    const nextGraph: PlanGraph = {
+      ...graph,
+      nodes: [...graph.nodes, { id, title }],
+      edges: options.parent
+        ? [...graph.edges, { from: options.parent, to: id }]
+        : [...graph.edges],
+    };
 
-  const nodePath = path.join(projectDir, "nodes", `${id}.mdx`);
-  let nodeFileCreated = false;
-  try {
-    await readFile(nodePath, "utf8");
-  } catch {
-    await mkdir(path.join(projectDir, "nodes"), { recursive: true });
-    await writeFile(nodePath, `# ${title}\n\nStart your notes here.\n`);
-    nodeFileCreated = true;
-  }
+    const validated = planGraphSchema.parse(nextGraph);
+    const integrityErrors = validateGraphIntegrity(validated);
+    if (integrityErrors.length > 0) {
+      throw new Error(integrityErrors.join("; "));
+    }
 
-  await writeFile(graphPath, `${JSON.stringify(validated, null, 2)}\n`);
+    const nodePath = path.join(projectDir, "nodes", `${id}.mdx`);
+    let nodeFileCreated = false;
+    try {
+      await readFile(nodePath, "utf8");
+    } catch {
+      await mkdir(path.join(projectDir, "nodes"), { recursive: true });
+      await writeFile(nodePath, `# ${title}\n\nStart your notes here.\n`);
+      nodeFileCreated = true;
+    }
 
-  return { id, graph: validated, nodeFileCreated };
+    await writeFile(graphPath, `${JSON.stringify(validated, null, 2)}\n`);
+
+    return { id, graph: validated, nodeFileCreated };
+  });
 }

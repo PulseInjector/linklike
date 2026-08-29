@@ -20,7 +20,11 @@ function parseFlag(args: string[], flag: string): string | undefined {
   if (index === -1) {
     return undefined;
   }
-  return args[index + 1];
+  const value = args[index + 1];
+  if (value === undefined || value.startsWith("--")) {
+    throw new Error(`${flag} requires a value`);
+  }
+  return value;
 }
 
 async function initProject(targetDir: string): Promise<void> {

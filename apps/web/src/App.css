@@ -228,7 +228,7 @@ button.secondary {
 
 .markdown {
   line-height: 1.6;
-  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .markdown h1 {
