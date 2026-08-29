@@ -5,7 +5,7 @@
   "description": "Local-first learning map that grows with you",
   "license": "MIT",
   "scripts": {
-    "dev": "pnpm --filter @linklike/web dev",
+    "dev": "pnpm -r --parallel --if-present dev",
     "build": "pnpm -r --if-present build",
     "lint": "pnpm -r --if-present lint",
     "check-types": "pnpm -r --if-present check-types",
