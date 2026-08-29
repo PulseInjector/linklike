@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { validateProjectDir } from "@linklike/core";
+import { addNode, validateProjectDir } from "@linklike/core";
 import { PROGRESS_STATUSES } from "@linklike/protocol";
 
 function usage(): void {
@@ -11,6 +11,7 @@ Usage:
   linklike init <directory>
   linklike validate <directory> [--json]
   linklike progress set <directory> <nodeId> --status <${PROGRESS_STATUSES.join("|")}>
+  linklike node add <directory> --title <title> [--parent <nodeId>]
 `);
 }
 
@@ -117,6 +118,26 @@ async function main(): Promise<void> {
     }
     if (!result.ok) {
       process.exitCode = 1;
+    }
+    return;
+  }
+
+  if (command === "node" && rest[0] === "add") {
+    const target = rest[1];
+    const title = parseFlag(rest, "--title");
+    const parent = parseFlag(rest, "--parent");
+    if (!target || !title) {
+      throw new Error(
+        "usage: linklike node add <directory> --title <title> [--parent <nodeId>]",
+      );
+    }
+    const result = await addNode(path.resolve(target), { title, parent });
+    console.log(`Added node ${result.id}`);
+    if (parent) {
+      console.log(`Linked ${parent} → ${result.id}`);
+    }
+    if (result.nodeFileCreated) {
+      console.log(`Created nodes/${result.id}.mdx`);
     }
     return;
   }

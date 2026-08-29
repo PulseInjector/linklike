@@ -53,6 +53,12 @@ From a user project directory:
 linklike validate --json .
 ```
 
+Grow the map from the terminal (validates before writing, creates the node stub):
+
+```bash
+linklike node add . --title "Pod basics" --parent root
+```
+
 ## Code style
 
 - Do not add narrative comments to source code.
