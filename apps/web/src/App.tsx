@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { ApiError, fetchProject, type ProjectData } from "./api";
+import { Map } from "./Map";
 import "./App.css";
 
 function readPathFromUrl(): string {
@@ -24,6 +25,7 @@ export function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [issues, setIssues] = useState<string[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const load = useCallback(async (target: string) => {
     setLoading(true);
@@ -63,15 +65,18 @@ export function App() {
 
   const onOpenAnother = () => {
     setData(null);
+    setSelectedId(null);
     setPath("");
     writePathToUrl("");
   };
 
   if (data) {
     return (
-      <ProjectSummary
+      <ProjectView
         data={data}
         path={path}
+        selectedId={selectedId}
+        onSelect={setSelectedId}
         onOpenAnother={onOpenAnother}
         onReload={() => void load(path)}
       />
@@ -115,35 +120,45 @@ export function App() {
   );
 }
 
-function ProjectSummary({
+function ProjectView({
   data,
   path,
+  selectedId,
+  onSelect,
   onOpenAnother,
   onReload,
 }: {
   data: ProjectData;
   path: string;
+  selectedId: string | null;
+  onSelect: (nodeId: string) => void;
   onOpenAnother: () => void;
   onReload: () => void;
 }) {
   return (
-    <main className="home">
-      <div className="home-card">
-        <h1>{data.project.name}</h1>
-        <p className="subtitle">{path}</p>
-        <p>
-          {data.graph.nodes.length} node
-          {data.graph.nodes.length === 1 ? "" : "s"} · map coming next.
-        </p>
+    <div className="project">
+      <header className="topbar">
+        <div className="topbar-title">
+          <strong>{data.project.name}</strong>
+          <span className="topbar-path">{path}</span>
+        </div>
         <div className="row">
-          <button type="button" onClick={onReload}>
+          <button type="button" className="secondary" onClick={onReload}>
             Reload
           </button>
           <button type="button" className="secondary" onClick={onOpenAnother}>
             Open another
           </button>
         </div>
+      </header>
+      <div className="map">
+        <Map
+          graph={data.graph}
+          progress={data.progress}
+          selectedId={selectedId}
+          onSelect={onSelect}
+        />
       </div>
-    </main>
+    </div>
   );
 }
