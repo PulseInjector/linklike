@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "nodes": [
+    {
+      "id": "root",
+      "title": "Minimal example"
+    }
+  ],
+  "edges": []
+}

@@ -1,0 +1,34 @@
+{
+  "name": "linklike",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Local-first learning map that grows with you",
+  "license": "MIT",
+  "scripts": {
+    "dev": "pnpm --filter @linklike/web dev",
+    "build": "pnpm -r --if-present build",
+    "lint": "pnpm -r --if-present lint",
+    "check-types": "pnpm -r --if-present check-types",
+    "format": "prettier --write \"**/*.{ts,tsx,js,mjs,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,json,md,yml,yaml}\"",
+    "validate": "node packages/cli/bin/linklike.mjs validate fixtures/minimal-project",
+    "test": "pnpm -r --if-present test",
+    "check": "pnpm lint && pnpm check-types && pnpm format:check && pnpm validate && pnpm test",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.3.1",
+    "prettier": "^3.7.4",
+    "typescript": "^5.9.2"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs,json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=22"
+  }
+}

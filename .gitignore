@@ -1,0 +1,12 @@
+node_modules
+dist
+.vite
+.turbo
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+.scratch
+.context
+.claude
