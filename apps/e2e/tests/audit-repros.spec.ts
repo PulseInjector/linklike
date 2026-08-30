@@ -5,7 +5,13 @@ import {
   copyTwoNodeProject,
   setProjectName,
 } from "../helpers/project.js";
-import { expectProjectView, mapNode, openProject, STATUS_BG } from "../helpers/ui.js";
+import {
+  expectProjectView,
+  mapNode,
+  openNodeDrawer,
+  openProject,
+  STATUS_BG,
+} from "../helpers/ui.js";
 
 const SLOW_GET_MS = 2000;
 
@@ -101,7 +107,7 @@ test.describe("audit reproducers (timing / network only)", () => {
     const projectDir = await copyTwoNodeProject();
     await openProject(page, projectDir);
 
-    await mapNode(page, "Minimal example").click();
+    await openNodeDrawer(page, "Minimal example");
     await page.getByRole("button", { name: "Done" }).click();
     await expect(mapNode(page, "Minimal example")).toHaveCSS(
       "background-color",
@@ -116,7 +122,7 @@ test.describe("audit reproducers (timing / network only)", () => {
     await page.getByRole("button", { name: "Reload" }).click();
     await reloadRequest;
 
-    await mapNode(page, "Second topic").click();
+    await openNodeDrawer(page, "Second topic");
     await page.getByRole("button", { name: "Skip" }).click();
     await expect(mapNode(page, "Second topic")).toHaveCSS(
       "background-color",

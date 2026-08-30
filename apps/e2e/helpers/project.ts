@@ -91,6 +91,80 @@ export async function copyTwoNodeProject(): Promise<string> {
   return dir;
 }
 
+export async function copySingleNodeProject(): Promise<string> {
+  const dir = await mkdtemp(path.join(tmpdir(), "linklike-e2e-"));
+  await mkdir(path.join(dir, "nodes"), { recursive: true });
+  await writeFile(
+    path.join(dir, "project.json"),
+    `${JSON.stringify(
+      { version: 1, name: "one-node", createdAt: "2026-01-01T00:00:00.000Z" },
+      null,
+      2,
+    )}\n`,
+  );
+  await writeFile(
+    path.join(dir, "plan.graph.json"),
+    `${JSON.stringify(
+      { version: 1, nodes: [{ id: "root", title: "Only node" }], edges: [] },
+      null,
+      2,
+    )}\n`,
+  );
+  await writeFile(
+    path.join(dir, "progress.json"),
+    `${JSON.stringify({ version: 1, entries: {} }, null, 2)}\n`,
+  );
+  await writeFile(path.join(dir, "nodes", "root.mdx"), "# Only node\n");
+  return dir;
+}
+
+export async function copyThreeNodeProject(): Promise<string> {
+  const dir = await mkdtemp(path.join(tmpdir(), "linklike-e2e-"));
+  await mkdir(path.join(dir, "nodes"), { recursive: true });
+  const nodes = [
+    { id: "root", title: "Root topic" },
+    { id: "parent", title: "Parent topic" },
+    { id: "child", title: "Child topic" },
+  ];
+  const edges = [
+    { from: "root", to: "parent" },
+    { from: "parent", to: "child" },
+  ];
+  await writeFile(
+    path.join(dir, "project.json"),
+    `${JSON.stringify(
+      { version: 1, name: "three-node", createdAt: "2026-01-01T00:00:00.000Z" },
+      null,
+      2,
+    )}\n`,
+  );
+  await writeFile(
+    path.join(dir, "plan.graph.json"),
+    `${JSON.stringify({ version: 1, nodes, edges }, null, 2)}\n`,
+  );
+  await writeFile(
+    path.join(dir, "progress.json"),
+    `${JSON.stringify(
+      {
+        version: 1,
+        entries: {
+          parent: { status: "learning" },
+          child: { status: "done" },
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  for (const node of nodes) {
+    await writeFile(
+      path.join(dir, "nodes", `${node.id}.mdx`),
+      `# ${node.title}\n\nNotes.\n`,
+    );
+  }
+  return dir;
+}
+
 export async function writeNodeMarkdown(
   projectDir: string,
   nodeId: string,

@@ -1,16 +1,13 @@
 import { expect, test } from "@playwright/test";
 
 import { copyMinimalProject, writeNodeMarkdown } from "../helpers/project.js";
-import { openProject } from "../helpers/ui.js";
+import { openNodeDrawer, openProject } from "../helpers/ui.js";
 
 test("reload refreshes open node markdown after disk edit", async ({ page }) => {
   const projectDir = await copyMinimalProject();
 
   await openProject(page, projectDir);
-  await page
-    .locator(".react-flow__node")
-    .filter({ hasText: "Minimal example" })
-    .click();
+  await openNodeDrawer(page, "Minimal example");
   await expect(page.locator(".drawer .markdown")).toContainText("Fixture project");
 
   await writeNodeMarkdown(

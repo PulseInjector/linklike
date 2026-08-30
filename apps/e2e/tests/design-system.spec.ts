@@ -6,7 +6,7 @@ import { expect, test } from "@playwright/test";
 
 import tokens from "../../../design/learning-map/tokens.json" with { type: "json" };
 import { copyMinimalProject } from "../helpers/project.js";
-import { mapNode, openProject } from "../helpers/ui.js";
+import { mapNode, openNodeDrawer, openProject } from "../helpers/ui.js";
 
 const screenshots = path.resolve(
   fileURLToPath(new URL(".", import.meta.url)),
@@ -41,7 +41,7 @@ test("home and map use the checked-in light tokens", async ({ page }) => {
   await expect(page.locator(".react-flow__edge-smoothstep")).not.toHaveCount(0);
   await expect(page.locator(".react-flow__edge-bezier")).toHaveCount(0);
 
-  await mapNode(page, "Pod basics").click();
+  await openNodeDrawer(page, "Pod basics");
   await expect(page.locator(".drawer h2")).toHaveText("Pod basics");
 
   await access(path.join(screenshots, "topic.png"));

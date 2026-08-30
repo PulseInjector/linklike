@@ -171,6 +171,11 @@ button.secondary {
   box-shadow: none;
   font-size: inherit;
   color: inherit;
+  overflow: visible;
+}
+
+.react-flow__nodes {
+  overflow: visible;
 }
 
 .react-flow__node-section {
@@ -181,6 +186,37 @@ button.secondary {
   width: 100%;
   height: 100%;
   position: relative;
+  overflow: visible;
+}
+
+.map-node-toolbar {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.25rem;
+  z-index: 5;
+  pointer-events: auto;
+}
+
+.map-node-toolbar.is-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.map-node-toolbar button {
+  padding: 0.25rem 0.55rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.map-node-title-input {
+  min-width: 10rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
 }
 
 .map-node {

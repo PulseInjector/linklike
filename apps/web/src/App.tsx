@@ -2,7 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { Progress, ProgressStatus } from "@linklike/protocol";
 
-import { ApiError, fetchProject, type ProjectData } from "./api";
+import {
+  ApiError,
+  createNode,
+  deleteNode,
+  fetchProject,
+  type ProjectData,
+} from "./api";
 import { Map } from "./Map";
 import { NodeDrawer } from "./NodeDrawer";
 import "./App.css";
@@ -29,16 +35,19 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [issues, setIssues] = useState<string[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [drawerId, setDrawerId] = useState<string | null>(null);
   const [contentEpoch, setContentEpoch] = useState(0);
 
   const pathRef = useRef(path);
   const loadGen = useRef(0);
   const progressGen = useRef(0);
+  const graphGen = useRef(0);
   const dataPathRef = useRef<string | null>(null);
 
   const load = useCallback(async (target: string) => {
     const gen = ++loadGen.current;
     const progressAtStart = progressGen.current;
+    const graphAtStart = graphGen.current;
     const shownPath = dataPathRef.current;
     setLoading(true);
     setError(null);
@@ -51,10 +60,19 @@ export function App() {
       }
       dataPathRef.current = target;
       setData((prev) => {
-        if (progressGen.current !== progressAtStart && prev && shownPath === target) {
-          return { ...project, progress: prev.progress };
+        if (!prev || shownPath !== target) {
+          return project;
         }
-        return project;
+        const keepProgress = progressGen.current !== progressAtStart;
+        const keepGraph = graphGen.current !== graphAtStart;
+        if (!keepProgress && !keepGraph) {
+          return project;
+        }
+        return {
+          ...project,
+          progress: keepProgress ? prev.progress : project.progress,
+          graph: keepGraph ? prev.graph : project.graph,
+        };
       });
     } catch (err) {
       if (gen !== loadGen.current || pathRef.current !== target) {
@@ -108,6 +126,7 @@ export function App() {
     setError(null);
     setIssues([]);
     setSelectedId(null);
+    setDrawerId(null);
     setLoading(false);
     setPath("");
     writePathToUrl("");
@@ -118,17 +137,53 @@ export function App() {
     setData((prev) => (prev ? { ...prev, progress } : prev));
   };
 
+  const onNodeAdded = (graph: ProjectData["graph"]) => {
+    graphGen.current += 1;
+    setError(null);
+    setIssues([]);
+    setData((prev) => (prev ? { ...prev, graph } : prev));
+  };
+
+  const onNodeDeleted = (
+    graph: ProjectData["graph"],
+    progress: Progress,
+    deletedIds: string[],
+  ) => {
+    graphGen.current += 1;
+    progressGen.current += 1;
+    setError(null);
+    setIssues([]);
+    setData((prev) => (prev ? { ...prev, graph, progress } : prev));
+    setSelectedId((current) =>
+      current && deletedIds.includes(current) ? null : current,
+    );
+    setDrawerId((current) =>
+      current && deletedIds.includes(current) ? null : current,
+    );
+  };
+
   if (data) {
     return (
       <ProjectView
         data={data}
         path={path}
         selectedId={selectedId}
+        drawerId={drawerId}
         error={error}
         issues={issues}
         onSelect={setSelectedId}
-        onCloseNode={() => setSelectedId(null)}
+        onOpenNotes={(nodeId) => {
+          setSelectedId(nodeId);
+          setDrawerId(nodeId);
+        }}
+        onCloseDrawer={() => setDrawerId(null)}
         onProgressUpdated={onProgressUpdated}
+        onNodeAdded={onNodeAdded}
+        onNodeDeleted={onNodeDeleted}
+        onMapError={(message) => {
+          setError(message);
+          setIssues([]);
+        }}
         onOpenAnother={onOpenAnother}
         onReload={() => {
           setContentEpoch((epoch) => epoch + 1);
@@ -180,11 +235,16 @@ function ProjectView({
   data,
   path,
   selectedId,
+  drawerId,
   error,
   issues,
   onSelect,
-  onCloseNode,
+  onOpenNotes,
+  onCloseDrawer,
   onProgressUpdated,
+  onNodeAdded,
+  onNodeDeleted,
+  onMapError,
   onOpenAnother,
   onReload,
   contentEpoch,
@@ -192,21 +252,56 @@ function ProjectView({
   data: ProjectData;
   path: string;
   selectedId: string | null;
+  drawerId: string | null;
   error: string | null;
   issues: string[];
-  onSelect: (nodeId: string) => void;
-  onCloseNode: () => void;
+  onSelect: (nodeId: string | null) => void;
+  onOpenNotes: (nodeId: string) => void;
+  onCloseDrawer: () => void;
   onProgressUpdated: (progress: Progress) => void;
+  onNodeAdded: (graph: ProjectData["graph"]) => void;
+  onNodeDeleted: (
+    graph: ProjectData["graph"],
+    progress: Progress,
+    deletedIds: string[],
+  ) => void;
+  onMapError: (message: string) => void;
   onOpenAnother: () => void;
   onReload: () => void;
   contentEpoch: number;
 }) {
-  const selectedNode = selectedId
-    ? (data.graph.nodes.find((node) => node.id === selectedId) ?? null)
+  const drawerNode = drawerId
+    ? (data.graph.nodes.find((node) => node.id === drawerId) ?? null)
     : null;
-  const selectedStatus: ProgressStatus | null = selectedId
-    ? (data.progress.entries[selectedId]?.status ?? null)
+  const drawerStatus: ProgressStatus | null = drawerId
+    ? (data.progress.entries[drawerId]?.status ?? null)
     : null;
+
+  const addChild = useCallback(
+    async (parentId: string, title: string) => {
+      try {
+        const result = await createNode(path, title, parentId);
+        onNodeAdded(result.graph);
+      } catch (err) {
+        onMapError(err instanceof ApiError ? err.message : String(err));
+        throw err;
+      }
+    },
+    [path, onNodeAdded, onMapError],
+  );
+
+  const removeNode = useCallback(
+    async (nodeId: string) => {
+      try {
+        const result = await deleteNode(path, nodeId);
+        onNodeDeleted(result.graph, result.progress, result.deletedIds);
+      } catch (err) {
+        onMapError(err instanceof ApiError ? err.message : String(err));
+        throw err;
+      }
+    },
+    [path, onNodeDeleted, onMapError],
+  );
 
   return (
     <div className="project">
@@ -244,17 +339,20 @@ function ProjectView({
             progress={data.progress}
             selectedId={selectedId}
             onSelect={onSelect}
+            onOpenNotes={onOpenNotes}
+            onAdd={addChild}
+            onDelete={removeNode}
           />
         </div>
-        {selectedNode && (
+        {drawerNode && (
           <NodeDrawer
-            key={`${selectedNode.id}:${contentEpoch}`}
+            key={`${drawerNode.id}:${contentEpoch}`}
             path={path}
-            nodeId={selectedNode.id}
-            title={selectedNode.title}
-            status={selectedStatus}
+            nodeId={drawerNode.id}
+            title={drawerNode.title}
+            status={drawerStatus}
             onStatusChange={onProgressUpdated}
-            onClose={onCloseNode}
+            onClose={onCloseDrawer}
           />
         )}
       </div>
