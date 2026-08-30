@@ -11,7 +11,8 @@
     "test:race": "tsx scripts/progress-race.ts",
     "test:race:graph": "tsx scripts/graph-progress-race.ts",
     "install-browsers": "playwright install chromium",
-    "capture:design": "tsx scripts/capture-design.ts"
+    "capture:design": "tsx scripts/capture-design.ts",
+    "capture:notes": "tsx scripts/capture-notes.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
