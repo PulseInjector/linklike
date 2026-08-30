@@ -25,6 +25,8 @@ export class InvalidStatus extends Data.TaggedError("InvalidStatus")<{
 
 export class EmptyTitle extends Data.TaggedError("EmptyTitle") {}
 
+export class LastNode extends Data.TaggedError("LastNode") {}
+
 export class GraphIntegrityError extends Data.TaggedError("GraphIntegrityError")<{
   readonly messages: readonly string[];
 }> {}
@@ -45,6 +47,7 @@ export type LinklikeError =
   | UnknownParent
   | InvalidStatus
   | EmptyTitle
+  | LastNode
   | GraphIntegrityError
   | LockTimeout
   | IoError;
@@ -63,6 +66,8 @@ export function linklikeErrorMessage(error: LinklikeError): string {
       return `status must be one of: ${error.allowed.join(", ")}`;
     case "EmptyTitle":
       return "title must not be empty";
+    case "LastNode":
+      return "cannot delete the last remaining node";
     case "GraphIntegrityError":
       return error.messages.join("; ");
     case "LockTimeout":
