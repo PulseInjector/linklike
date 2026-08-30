@@ -173,6 +173,10 @@ button.secondary {
   color: inherit;
 }
 
+.react-flow__node-section {
+  pointer-events: none;
+}
+
 .map-node-wrap {
   width: 100%;
   height: 100%;

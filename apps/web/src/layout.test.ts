@@ -87,4 +87,32 @@ describe("layoutLearningMap", () => {
     expect(byId.what.side).not.toBe("spine");
     expect(byId.python.kind).toBe("subtopic");
   });
+
+  it("terminates when an extra edge points back at the current root", () => {
+    const cyclic = graph(
+      [
+        { id: "root", title: "Root" },
+        { id: "intro", title: "Intro" },
+        { id: "what", title: "What" },
+      ],
+      [
+        ["root", "intro"],
+        ["intro", "what"],
+        ["what", "root"],
+      ],
+    );
+    const { nodes } = layoutLearningMap(cyclic);
+    expect(nodes.map((node) => node.id).sort()).toEqual(["intro", "root", "what"]);
+    const byId = Object.fromEntries(nodes.map((node) => [node.id, node]));
+    expect(byId.root.side).toBe("spine");
+    expect(byId.what.kind).toBe("subtopic");
+  });
+
+  it("terminates on a self-loop", () => {
+    const { nodes } = layoutLearningMap(
+      graph([{ id: "root", title: "Root" }], [["root", "root"]]),
+    );
+    expect(nodes).toHaveLength(1);
+    expect(nodes[0]?.id).toBe("root");
+  });
 });

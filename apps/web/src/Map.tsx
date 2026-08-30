@@ -53,7 +53,11 @@ export function Map({
       zIndex: -1,
       width: section.width,
       height: section.height,
-      style: { width: section.width, height: section.height },
+      style: {
+        width: section.width,
+        height: section.height,
+        pointerEvents: "none",
+      },
     }));
 
     const cards: Node[] = laidOut.nodes.map((node) => ({

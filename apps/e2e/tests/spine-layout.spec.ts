@@ -65,6 +65,45 @@ test("spine layout fans subtopics and keeps plan.graph.json free of position", a
   await expect(page.locator(".drawer h2")).toHaveText("Introduction");
 });
 
+test("section frames do not capture canvas pan", async ({ page }) => {
+  const projectDir = await copySpineProject();
+  await openProject(page, projectDir);
+
+  const section = page.locator(".react-flow__node-section").first();
+  await expect(section).toBeVisible();
+  await expect(section).toHaveCSS("pointer-events", "none");
+
+  const point = await section.evaluate((el) => {
+    const rect = el.getBoundingClientRect();
+    const cards = [...document.querySelectorAll(".map-node")].map((node) =>
+      node.getBoundingClientRect(),
+    );
+    for (let y = rect.top + 2; y < rect.bottom - 2; y += 4) {
+      for (let x = rect.left + 2; x < rect.right - 2; x += 4) {
+        const onCard = cards.some(
+          (box) => x >= box.left && x <= box.right && y >= box.top && y <= box.bottom,
+        );
+        if (!onCard) {
+          return { x, y };
+        }
+      }
+    }
+    return null;
+  });
+  expect(point).toBeTruthy();
+
+  const viewport = page.locator(".react-flow__viewport");
+  const before = await viewport.evaluate((el) => el.style.transform);
+
+  await page.mouse.move(point!.x, point!.y);
+  await page.mouse.down();
+  await page.mouse.move(point!.x + 80, point!.y + 60);
+  await page.mouse.up();
+
+  const after = await viewport.evaluate((el) => el.style.transform);
+  expect(after).not.toBe(before);
+});
+
 test("reference map titles match the Data Engineer topics", async ({ page }) => {
   const projectDir = await copyReferenceMap();
   await openProject(page, projectDir);

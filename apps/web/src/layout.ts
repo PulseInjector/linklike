@@ -28,18 +28,41 @@ export type LayoutResult = {
   sections: SectionFrame[];
 };
 
+function wouldCycle(parentOf: Map<string, string>, from: string, to: string): boolean {
+  let cur: string | undefined = from;
+  const seen = new Set<string>();
+  while (cur) {
+    if (cur === to) {
+      return true;
+    }
+    if (seen.has(cur)) {
+      return true;
+    }
+    seen.add(cur);
+    cur = parentOf.get(cur);
+  }
+  return false;
+}
+
 export function childrenByParent(graph: PlanGraph): Map<string, string[]> {
   const children = new Map<string, string[]>();
   for (const node of graph.nodes) {
     children.set(node.id, []);
   }
-  const parentOf = new Set<string>();
+  const parentOf = new Map<string, string>();
   // First incoming edge is the --parent used for placement; extra edges still draw.
+  // Schema allows cycles; skip an edge that would parent a node under its descendant.
   for (const edge of graph.edges) {
-    if (!children.has(edge.from) || !children.has(edge.to) || parentOf.has(edge.to)) {
+    if (
+      !children.has(edge.from) ||
+      !children.has(edge.to) ||
+      parentOf.has(edge.to) ||
+      edge.from === edge.to ||
+      wouldCycle(parentOf, edge.from, edge.to)
+    ) {
       continue;
     }
-    parentOf.add(edge.to);
+    parentOf.set(edge.to, edge.from);
     children.get(edge.from)!.push(edge.to);
   }
   return children;
@@ -139,6 +162,7 @@ export function layoutLearningMap(graph: PlanGraph): LayoutResult {
   const titles = new Map(graph.nodes.map((node) => [node.id, node.title]));
   const children = childrenByParent(graph);
   const placed = new Map<string, LaidOutNode>();
+  const visiting = new Set<string>();
   const sections: SectionFrame[] = [];
 
   const spineX =
@@ -148,6 +172,11 @@ export function layoutLearningMap(graph: PlanGraph): LayoutResult {
     tokens.layout.topicMaxWidth / 2;
 
   const layoutSubtree = (id: string, topY: number): number => {
+    if (placed.has(id) || visiting.has(id)) {
+      return topY;
+    }
+    visiting.add(id);
+
     const title = titles.get(id) ?? id;
     const kids = children.get(id) ?? [];
     const leaves = kids.filter((child) => (children.get(child)?.length ?? 0) === 0);
@@ -247,6 +276,7 @@ export function layoutLearningMap(graph: PlanGraph): LayoutResult {
       cursorY = layoutSubtree(child, cursorY);
     }
 
+    visiting.delete(id);
     return cursorY;
   };
 
