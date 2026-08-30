@@ -114,4 +114,34 @@ describe("setProgress", () => {
     expect(progress.entries.root.status).toBe("done");
     expect(progress.entries.second.status).toBe("skip");
   });
+
+  it("refuses to mutate progress on an invalid project", async () => {
+    const dir = await makeProject();
+    await rm(path.join(dir, "nodes", "root.mdx"));
+    await expect(runCore(setProgress(dir, "root", "done"))).rejects.toMatchObject({
+      _tag: "InvalidProject",
+    });
+    const progress = JSON.parse(
+      await readFile(path.join(dir, "progress.json"), "utf8"),
+    ) as { entries: Record<string, { status: string }> };
+    expect(progress.entries.root.status).toBe("learning");
+  });
+
+  it("completes alongside a concurrent addNode", async () => {
+    const dir = await makeProject();
+    await Promise.all([
+      runCore(addNode(dir, { title: "Concurrent", parent: "root" })),
+      runCore(setProgress(dir, "root", "done")),
+    ]);
+
+    const graph = planGraphSchema.parse(
+      JSON.parse(await readFile(path.join(dir, "plan.graph.json"), "utf8")),
+    );
+    expect(graph.nodes.map((node) => node.id)).toContain("concurrent");
+
+    const progress = JSON.parse(
+      await readFile(path.join(dir, "progress.json"), "utf8"),
+    ) as { entries: Record<string, { status: string }> };
+    expect(progress.entries.root.status).toBe("done");
+  });
 });

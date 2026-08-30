@@ -76,3 +76,14 @@ export async function readProgressFile(projectDir: string): Promise<{
   const raw = await readFile(path.join(projectDir, "progress.json"), "utf8");
   return JSON.parse(raw) as { entries: Record<string, { status: string }> };
 }
+
+export async function setProjectName(projectDir: string, name: string): Promise<void> {
+  const projectPath = path.join(projectDir, "project.json");
+  const project = JSON.parse(await readFile(projectPath, "utf8")) as {
+    version: number;
+    name: string;
+    createdAt: string;
+  };
+  project.name = name;
+  await writeFile(projectPath, `${JSON.stringify(project, null, 2)}\n`);
+}

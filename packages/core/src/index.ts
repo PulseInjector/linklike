@@ -365,31 +365,38 @@ export const setProgress = (
   projectDir: string,
   nodeId: string,
   status: string,
-): Effect.Effect<Progress, InvalidStatus | UnknownNode | LockTimeout | IoError> => {
+): Effect.Effect<
+  Progress,
+  InvalidStatus | InvalidProject | UnknownNode | LockTimeout | IoError
+> => {
   if (!PROGRESS_STATUSES.includes(status as ProgressStatus)) {
     return Effect.fail(new InvalidStatus({ status, allowed: [...PROGRESS_STATUSES] }));
   }
 
-  const graphPath = path.join(projectDir, "plan.graph.json");
-  const { progressPath } = projectPaths(projectDir);
+  const { graphPath, progressPath } = projectPaths(projectDir);
 
-  return Effect.gen(function* () {
-    const graph = planGraphSchema.parse(yield* readJson(graphPath));
+  // Graph read + progress RMW share the lock so a concurrent addNode write cannot tear plan.graph.json.
+  return withProjectLock(
+    projectDir,
+    Effect.gen(function* () {
+      const existingProject = yield* validateProjectDir(projectDir);
+      if (!existingProject.ok) {
+        return yield* Effect.fail(
+          new InvalidProject({ issues: existingProject.issues }),
+        );
+      }
 
-    if (!graph.nodes.some((node) => node.id === nodeId)) {
-      return yield* Effect.fail(new UnknownNode({ nodeId }));
-    }
+      const graph = planGraphSchema.parse(yield* readJson(graphPath));
+      if (!graph.nodes.some((node) => node.id === nodeId)) {
+        return yield* Effect.fail(new UnknownNode({ nodeId }));
+      }
 
-    return yield* withProjectLock(
-      projectDir,
-      Effect.gen(function* () {
-        const progress = progressSchema.parse(yield* readJson(progressPath));
-        progress.entries[nodeId] = { status: status as ProgressStatus };
-        yield* writeText(progressPath, `${JSON.stringify(progress, null, 2)}\n`);
-        return progress;
-      }),
-    );
-  });
+      const progress = progressSchema.parse(yield* readJson(progressPath));
+      progress.entries[nodeId] = { status: status as ProgressStatus };
+      yield* writeText(progressPath, `${JSON.stringify(progress, null, 2)}\n`);
+      return progress;
+    }),
+  );
 };
 
 function slugify(title: string): string {

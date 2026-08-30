@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -82,6 +82,22 @@ describe("api", () => {
       await readFile(path.join(dir, "progress.json"), "utf8"),
     ) as { entries: Record<string, { status: string }> };
     expect(written.entries.root.status).toBe("done");
+  });
+
+  it("rejects progress updates on an invalid project", async () => {
+    const dir = await makeTempProject();
+    tempDirs.push(dir);
+    await rm(path.join(dir, "nodes", "root.mdx"));
+
+    const res = await app.request("/project/progress", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ path: dir, nodeId: "root", status: "done" }),
+    });
+
+    expect(res.status).toBe(422);
+    const body = (await res.json()) as { tag: string };
+    expect(body.tag).toBe("InvalidProject");
   });
 
   it("rejects an invalid status", async () => {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { Progress, ProgressStatus } from "@linklike/protocol";
 
@@ -31,15 +31,39 @@ export function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [contentEpoch, setContentEpoch] = useState(0);
 
+  const pathRef = useRef(path);
+  const loadGen = useRef(0);
+  const progressGen = useRef(0);
+  const dataPathRef = useRef<string | null>(null);
+
   const load = useCallback(async (target: string) => {
+    const gen = ++loadGen.current;
+    const progressAtStart = progressGen.current;
+    const shownPath = dataPathRef.current;
     setLoading(true);
     setError(null);
     setIssues([]);
     try {
       const project = await fetchProject(target);
-      setData(project);
+      // Ignore this response if the user switched path, reloaded, or left the project.
+      if (gen !== loadGen.current || pathRef.current !== target) {
+        return;
+      }
+      dataPathRef.current = target;
+      setData((prev) => {
+        if (progressGen.current !== progressAtStart && prev && shownPath === target) {
+          return { ...project, progress: prev.progress };
+        }
+        return project;
+      });
     } catch (err) {
-      setData(null);
+      if (gen !== loadGen.current || pathRef.current !== target) {
+        return;
+      }
+      if (dataPathRef.current !== target) {
+        dataPathRef.current = null;
+        setData(null);
+      }
       if (err instanceof ApiError) {
         setError(err.message);
         setIssues(err.issues.map((issue) => issue.message));
@@ -47,11 +71,14 @@ export function App() {
         setError(err instanceof Error ? err.message : String(err));
       }
     } finally {
-      setLoading(false);
+      if (gen === loadGen.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
+    pathRef.current = path;
     if (path) {
       void load(path);
     }
@@ -64,21 +91,30 @@ export function App() {
       return;
     }
     writePathToUrl(trimmed);
+    pathRef.current = trimmed;
     if (trimmed === path) {
       void load(trimmed);
     } else {
+      loadGen.current += 1;
       setPath(trimmed);
     }
   };
 
   const onOpenAnother = () => {
+    loadGen.current += 1;
+    dataPathRef.current = null;
+    pathRef.current = "";
     setData(null);
+    setError(null);
+    setIssues([]);
     setSelectedId(null);
+    setLoading(false);
     setPath("");
     writePathToUrl("");
   };
 
   const onProgressUpdated = (progress: Progress) => {
+    progressGen.current += 1;
     setData((prev) => (prev ? { ...prev, progress } : prev));
   };
 
@@ -88,6 +124,8 @@ export function App() {
         data={data}
         path={path}
         selectedId={selectedId}
+        error={error}
+        issues={issues}
         onSelect={setSelectedId}
         onCloseNode={() => setSelectedId(null)}
         onProgressUpdated={onProgressUpdated}
@@ -142,6 +180,8 @@ function ProjectView({
   data,
   path,
   selectedId,
+  error,
+  issues,
   onSelect,
   onCloseNode,
   onProgressUpdated,
@@ -152,6 +192,8 @@ function ProjectView({
   data: ProjectData;
   path: string;
   selectedId: string | null;
+  error: string | null;
+  issues: string[];
   onSelect: (nodeId: string) => void;
   onCloseNode: () => void;
   onProgressUpdated: (progress: Progress) => void;
@@ -182,6 +224,19 @@ function ProjectView({
           </button>
         </div>
       </header>
+      {error && (
+        <div className="error project-error" role="alert">
+          <strong>Could not refresh this project.</strong>
+          <p>{error}</p>
+          {issues.length > 0 && (
+            <ul>
+              {issues.map((message) => (
+                <li key={message}>{message}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
       <div className="workspace">
         <div className="map">
           <Map

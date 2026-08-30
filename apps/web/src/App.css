@@ -118,6 +118,13 @@ button.secondary {
   font-size: 0.9rem;
 }
 
+.project-error {
+  margin: 0;
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+}
+
 .project {
   height: 100%;
   display: flex;
@@ -258,4 +265,3 @@ button.secondary {
   padding: 0;
   background: transparent;
 }
-

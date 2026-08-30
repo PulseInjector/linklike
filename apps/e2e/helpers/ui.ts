@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 export async function openProject(page: Page, projectDir: string): Promise<void> {
   await page.goto("/");
@@ -13,6 +13,10 @@ export async function openProjectFromUrl(
 ): Promise<void> {
   await page.goto(`/?path=${encodeURIComponent(projectDir)}`);
   await page.getByRole("button", { name: "Reload" }).waitFor();
+}
+
+export async function expectProjectView(page: Page): Promise<void> {
+  await expect(page.getByRole("button", { name: "Reload" })).toBeVisible();
 }
 
 export function mapNode(page: Page, title: string) {
