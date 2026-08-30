@@ -113,3 +113,18 @@ test("reference map titles match the Data Engineer topics", async ({ page }) => 
   await expect(mapNode(page, "What is Data Engineering?")).toBeVisible();
   await expect(page.locator(".map-section").first()).toBeVisible();
 });
+
+test("reference map opens on the root at a readable zoom", async ({ page }) => {
+  page.setViewportSize({ width: 1440, height: 900 });
+  const projectDir = await copyReferenceMap();
+  await openProject(page, projectDir);
+
+  const root = mapNode(page, "Data Engineer");
+  await expect(root).toBeVisible();
+  const box = await root.boundingBox();
+  expect(box).toBeTruthy();
+  expect(box!.width).toBeGreaterThan(80);
+  expect(box!.y).toBeGreaterThan(40);
+  expect(box!.y).toBeLessThan(240);
+  await expect(mapNode(page, "Introduction")).toBeVisible();
+});

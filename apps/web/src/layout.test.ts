@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { PlanGraph } from "@linklike/protocol";
 
-import { layoutLearningMap } from "./layout";
+import { layoutLearningMap, nodeHeight } from "./layout";
 
 function graph(
   nodes: Array<{ id: string; title: string }>,
@@ -39,6 +39,12 @@ describe("layoutLearningMap", () => {
       ["basics", "scala"],
     ],
   );
+
+  it("grows estimated height when a title wraps", () => {
+    const oneLine = nodeHeight("Python", 180, "subtopic");
+    const wrapped = nodeHeight("A".repeat(80), 180, "subtopic");
+    expect(wrapped).toBeGreaterThan(oneLine);
+  });
 
   it("puts topics on a vertical spine and fans leaves left and right", () => {
     const { nodes } = layoutLearningMap(sample);

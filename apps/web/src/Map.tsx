@@ -1,9 +1,13 @@
-import { useMemo } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 
 import {
   Background,
   Controls,
+  PanOnScrollMode,
   ReactFlow,
+  useNodesInitialized,
+  useReactFlow,
+  useStore,
   type Edge,
   type Node,
   type NodeMouseHandler,
@@ -15,16 +19,43 @@ import type { PlanGraph, Progress, ProgressStatus } from "@linklike/protocol";
 
 import tokens from "../../../design/learning-map/tokens.json";
 import { layoutLearningMap } from "./layout";
-import { SectionNode, SubtopicNode, TopicNode } from "./MapNodes";
+import { CardNode, SectionNode } from "./MapNodes";
+import { MAX_ZOOM, MIN_ZOOM, openingViewport } from "./viewport";
 
 const nodeTypes = {
-  topic: TopicNode,
-  subtopic: SubtopicNode,
+  topic: CardNode,
+  subtopic: CardNode,
   section: SectionNode,
 } satisfies NodeTypes;
 
 function statusOf(progress: Progress, nodeId: string): ProgressStatus | "none" {
   return progress.entries[nodeId]?.status ?? "none";
+}
+
+function OpeningView({ graphId }: { graphId: string }) {
+  const { getNodesBounds, setViewport } = useReactFlow();
+  const width = useStore((state) => state.width);
+  const height = useStore((state) => state.height);
+  const nodes = useStore((state) => state.nodes);
+  const ready = useNodesInitialized();
+  const applied = useRef<string | null>(null);
+
+  useLayoutEffect(() => {
+    if (!ready || width < 1 || height < 1) {
+      return;
+    }
+    if (applied.current === graphId) {
+      return;
+    }
+    const cards = nodes.filter((node) => node.type !== "section");
+    if (cards.length === 0) {
+      return;
+    }
+    setViewport(openingViewport(getNodesBounds(cards), { width, height }));
+    applied.current = graphId;
+  }, [graphId, ready, width, height, nodes, getNodesBounds, setViewport]);
+
+  return null;
 }
 
 export function Map({
@@ -39,6 +70,7 @@ export function Map({
   onSelect: (nodeId: string) => void;
 }) {
   const laidOut = useMemo(() => layoutLearningMap(graph), [graph]);
+  const graphId = useMemo(() => graph.nodes.map((node) => node.id).join("\0"), [graph]);
 
   const nodes = useMemo<Node[]>(() => {
     const frames: Node[] = laidOut.sections.map((section) => ({
@@ -127,13 +159,20 @@ export function Map({
       edgesFocusable={false}
       elementsSelectable
       deleteKeyCode={null}
-      fitView
-      minZoom={0.15}
-      maxZoom={1.5}
+      minZoom={MIN_ZOOM}
+      maxZoom={MAX_ZOOM}
+      panOnScroll
+      panOnScrollMode={PanOnScrollMode.Free}
+      zoomOnScroll={false}
+      fitViewOptions={{ padding: 0.15, minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM }}
       proOptions={{ hideAttribution: true }}
     >
+      <OpeningView graphId={graphId} />
       <Background color="var(--map-dot)" gap={22} size={1} />
-      <Controls showInteractive={false} />
+      <Controls
+        showInteractive={false}
+        fitViewOptions={{ padding: 0.15, minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM }}
+      />
     </ReactFlow>
   );
 }

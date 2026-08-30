@@ -6,8 +6,7 @@ export type MapNodeData = {
   status: "none" | "learning" | "done" | "skip";
 };
 
-export type TopicFlowNode = Node<MapNodeData, "topic">;
-export type SubtopicFlowNode = Node<MapNodeData, "subtopic">;
+export type CardFlowNode = Node<MapNodeData, "topic" | "subtopic">;
 export type SectionFlowNode = Node<Record<string, never>, "section">;
 
 function cardClass(data: MapNodeData, selected: boolean): string {
@@ -20,10 +19,8 @@ function Handles() {
   return (
     <>
       <Handle type="target" position={Position.Top} id="target-top" />
-      <Handle type="target" position={Position.Bottom} id="target-bottom" />
       <Handle type="target" position={Position.Left} id="target-left" />
       <Handle type="target" position={Position.Right} id="target-right" />
-      <Handle type="source" position={Position.Top} id="source-top" />
       <Handle type="source" position={Position.Bottom} id="source-bottom" />
       <Handle type="source" position={Position.Left} id="source-left" />
       <Handle type="source" position={Position.Right} id="source-right" />
@@ -31,16 +28,7 @@ function Handles() {
   );
 }
 
-export function TopicNode({ data, selected }: NodeProps<TopicFlowNode>) {
-  return (
-    <div className="map-node-wrap">
-      <div className={cardClass(data, selected)}>{data.label}</div>
-      <Handles />
-    </div>
-  );
-}
-
-export function SubtopicNode({ data, selected }: NodeProps<SubtopicFlowNode>) {
+export function CardNode({ data, selected }: NodeProps<CardFlowNode>) {
   return (
     <div className="map-node-wrap">
       <div className={cardClass(data, selected)}>{data.label}</div>

@@ -102,7 +102,8 @@ export function nodeHeight(title: string, width: number, kind: NodeKind): number
   const lines = Math.max(1, Math.ceil(title.length / charsPerLine));
   const base =
     kind === "topic" ? tokens.layout.topicHeight : tokens.layout.subtopicHeight;
-  return lines <= 1 ? base : base + (lines - 1) * 18;
+  // extraLineHeight ≈ 17px × line-height 1.2; measured long titles still fit one line.
+  return lines <= 1 ? base : base + (lines - 1) * tokens.layout.extraLineHeight;
 }
 
 function columnHeight(items: Array<{ height: number }>, gap: number): number {

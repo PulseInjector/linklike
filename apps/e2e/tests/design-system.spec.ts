@@ -27,24 +27,6 @@ test("home and map use the checked-in light tokens", async ({ page }) => {
     "background-color",
     tokens.page.backgroundRgb,
   );
-  await expect(mapNode(page, "Kubernetes overview")).toHaveCSS(
-    "background-color",
-    tokens.topic.backgroundRgb,
-  );
-  await expect(mapNode(page, "Cluster DNS")).toHaveCSS(
-    "background-color",
-    tokens.subtopic.backgroundRgb,
-  );
-  await expect(page.locator(".react-flow__edge-smoothstep")).not.toHaveCount(0);
-  await expect(page.locator(".react-flow__edge-bezier")).toHaveCount(0);
-
-  await mapNode(page, "Pod basics").click();
-  await expect(page.locator(".drawer h2")).toHaveText("Pod basics");
-});
-
-test("topic and subtopic clips match token styling", async ({ page }) => {
-  const projectDir = await copyMinimalProject();
-  await openProject(page, projectDir);
 
   const topic = mapNode(page, "Kubernetes overview");
   const subtopic = mapNode(page, "Cluster DNS");
@@ -56,9 +38,12 @@ test("topic and subtopic clips match token styling", async ({ page }) => {
   await expect(subtopic).toHaveCSS("color", tokens.subtopic.colorRgb);
   await expect(subtopic).toHaveCSS("border-top-color", tokens.subtopic.borderRgb);
   await expect(subtopic).toHaveCSS("font-size", tokens.font.size);
-});
+  await expect(page.locator(".react-flow__edge-smoothstep")).not.toHaveCount(0);
+  await expect(page.locator(".react-flow__edge-bezier")).toHaveCount(0);
 
-test("reference design screenshots are in the repo", async () => {
+  await mapNode(page, "Pod basics").click();
+  await expect(page.locator(".drawer h2")).toHaveText("Pod basics");
+
   await access(path.join(screenshots, "topic.png"));
   await access(path.join(screenshots, "subtopic.png"));
   await access(path.join(screenshots, "section.png"));

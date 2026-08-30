@@ -176,6 +176,7 @@ async function captureLive(page, tokens) {
 
   if (pageBg) {
     const hex = rgbToHex(pageBg);
+    // Ignore dark site chrome; the map canvas is white.
     if (hex && luminance(hex) >= 80) {
       tokens.page.background = hex;
       tokens.page.backgroundRgb = hexToRgb(hex);

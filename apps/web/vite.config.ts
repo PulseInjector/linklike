@@ -11,7 +11,12 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    fs: { allow: [repoRoot] },
+    fs: {
+      allow: [
+        path.resolve(fileURLToPath(new URL(".", import.meta.url))),
+        path.resolve(repoRoot, "design"),
+      ],
+    },
     proxy: {
       "/api": {
         target: `http://localhost:${apiPort}`,
