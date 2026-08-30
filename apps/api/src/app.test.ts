@@ -84,6 +84,23 @@ describe("api", () => {
     expect(written.entries.root.status).toBe("done");
   });
 
+  it("clears progress via PATCH pending", async () => {
+    const dir = await makeTempProject();
+    tempDirs.push(dir);
+
+    const res = await app.request("/project/progress", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ path: dir, nodeId: "root", status: "pending" }),
+    });
+
+    expect(res.status).toBe(200);
+    const written = JSON.parse(
+      await readFile(path.join(dir, "progress.json"), "utf8"),
+    ) as { entries: Record<string, { status: string }> };
+    expect(written.entries.root).toBeUndefined();
+  });
+
   it("rejects progress updates on an invalid project", async () => {
     const dir = await makeTempProject();
     tempDirs.push(dir);

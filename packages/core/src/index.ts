@@ -10,7 +10,9 @@ import {
   type PlanGraph,
   type Progress,
   type ProgressStatus,
-  PROGRESS_STATUSES,
+  type ProgressWriteStatus,
+  PROGRESS_CLEAR_STATUS,
+  PROGRESS_WRITE_STATUSES,
 } from "@linklike/protocol";
 import { Effect } from "effect";
 
@@ -369,8 +371,10 @@ export const setProgress = (
   Progress,
   InvalidStatus | InvalidProject | UnknownNode | LockTimeout | IoError
 > => {
-  if (!PROGRESS_STATUSES.includes(status as ProgressStatus)) {
-    return Effect.fail(new InvalidStatus({ status, allowed: [...PROGRESS_STATUSES] }));
+  if (!PROGRESS_WRITE_STATUSES.includes(status as ProgressWriteStatus)) {
+    return Effect.fail(
+      new InvalidStatus({ status, allowed: [...PROGRESS_WRITE_STATUSES] }),
+    );
   }
 
   const { graphPath, progressPath } = projectPaths(projectDir);
@@ -392,7 +396,12 @@ export const setProgress = (
       }
 
       const progress = progressSchema.parse(yield* readJson(progressPath));
-      progress.entries[nodeId] = { status: status as ProgressStatus };
+      // pending matches roadmap.sh reset; drop the entry instead of storing it.
+      if (status === PROGRESS_CLEAR_STATUS) {
+        delete progress.entries[nodeId];
+      } else {
+        progress.entries[nodeId] = { status: status as ProgressStatus };
+      }
       yield* writeText(progressPath, `${JSON.stringify(progress, null, 2)}\n`);
       return progress;
     }),

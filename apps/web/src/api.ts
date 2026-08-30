@@ -1,4 +1,9 @@
-import type { PlanGraph, Progress, ProgressStatus, Project } from "@linklike/protocol";
+import type {
+  PlanGraph,
+  Progress,
+  ProgressWriteStatus,
+  Project,
+} from "@linklike/protocol";
 
 export interface ProjectData {
   project: Project;
@@ -62,7 +67,7 @@ export async function fetchNode(path: string, nodeId: string): Promise<string> {
 export async function updateProgress(
   path: string,
   nodeId: string,
-  status: ProgressStatus,
+  status: ProgressWriteStatus,
 ): Promise<Progress> {
   const res = await fetch(`/api/project/progress`, {
     method: "PATCH",

@@ -9,7 +9,7 @@ import {
   setProgress,
   validateProjectDir,
 } from "@linklike/core";
-import { PROGRESS_STATUSES } from "@linklike/protocol";
+import { PROGRESS_WRITE_STATUSES } from "@linklike/protocol";
 
 function usage(): void {
   console.log(`linklike — local learning map
@@ -17,7 +17,7 @@ function usage(): void {
 Usage:
   linklike init <directory>
   linklike validate <directory> [--json]
-  linklike progress set <directory> <nodeId> --status <${PROGRESS_STATUSES.join("|")}>
+  linklike progress set <directory> <nodeId> --status <${PROGRESS_WRITE_STATUSES.join("|")}>
   linklike node add <directory> --title <title> [--parent <nodeId>]
 `);
 }
@@ -136,11 +136,13 @@ async function main(): Promise<void> {
     const status = parseFlag(rest, "--status");
     if (!target || !nodeId || !status) {
       throw new Error(
-        "usage: linklike progress set <directory> <nodeId> --status learning|done|skip",
+        "usage: linklike progress set <directory> <nodeId> --status learning|done|skip|pending",
       );
     }
     await runCore(setProgress(path.resolve(target), nodeId, status));
-    console.log(`Set ${nodeId} → ${status}`);
+    console.log(
+      status === "pending" ? `Cleared ${nodeId}` : `Set ${nodeId} → ${status}`,
+    );
     return;
   }
 
