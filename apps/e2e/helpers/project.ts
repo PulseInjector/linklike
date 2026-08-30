@@ -1,15 +1,33 @@
+import { execFile } from "node:child_process";
 import { cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
+
+const execFileAsync = promisify(execFile);
 
 const fixtureDir = fileURLToPath(
   new URL("../../../fixtures/minimal-project", import.meta.url),
 );
 
+const referenceDir = fileURLToPath(
+  new URL("../../../fixtures/reference-map", import.meta.url),
+);
+
+const cliBin = fileURLToPath(
+  new URL("../../../packages/cli/bin/linklike.mjs", import.meta.url),
+);
+
 export async function copyMinimalProject(): Promise<string> {
   const dir = await mkdtemp(path.join(tmpdir(), "linklike-e2e-"));
   await cp(fixtureDir, dir, { recursive: true });
+  return dir;
+}
+
+export async function copyReferenceMap(): Promise<string> {
+  const dir = await mkdtemp(path.join(tmpdir(), "linklike-e2e-"));
+  await cp(referenceDir, dir, { recursive: true });
   return dir;
 }
 
@@ -116,4 +134,82 @@ export async function setProjectName(projectDir: string, name: string): Promise<
   };
   project.name = name;
   await writeFile(projectPath, `${JSON.stringify(project, null, 2)}\n`);
+}
+
+export async function addNodeViaCli(
+  projectDir: string,
+  title: string,
+  parent: string,
+): Promise<void> {
+  await execFileAsync(process.execPath, [
+    cliBin,
+    "node",
+    "add",
+    projectDir,
+    "--title",
+    title,
+    "--parent",
+    parent,
+  ]);
+}
+
+export async function readGraphFile(projectDir: string): Promise<{
+  nodes: Array<Record<string, unknown>>;
+  edges: Array<{ from: string; to: string }>;
+}> {
+  const raw = await readFile(path.join(projectDir, "plan.graph.json"), "utf8");
+  return JSON.parse(raw) as {
+    nodes: Array<Record<string, unknown>>;
+    edges: Array<{ from: string; to: string }>;
+  };
+}
+
+export async function copySpineProject(): Promise<string> {
+  const dir = await mkdtemp(path.join(tmpdir(), "linklike-e2e-"));
+  await mkdir(path.join(dir, "nodes"), { recursive: true });
+  const nodes = [
+    { id: "root", title: "Data Engineer" },
+    { id: "introduction", title: "Introduction" },
+    { id: "what-is-data-engineering", title: "What is Data Engineering?" },
+    { id: "skills", title: "Skills and Responsibilities" },
+    { id: "lifecycle", title: "Data Engineering Lifecycle" },
+    { id: "learn-the-basics", title: "Learn the Basics" },
+    { id: "python", title: "Python" },
+    { id: "java", title: "Java" },
+    { id: "scala", title: "Scala" },
+  ];
+  const edges = [
+    { from: "root", to: "introduction" },
+    { from: "introduction", to: "what-is-data-engineering" },
+    { from: "introduction", to: "skills" },
+    { from: "introduction", to: "lifecycle" },
+    { from: "root", to: "learn-the-basics" },
+    { from: "learn-the-basics", to: "python" },
+    { from: "learn-the-basics", to: "java" },
+    { from: "learn-the-basics", to: "scala" },
+  ];
+
+  await writeFile(
+    path.join(dir, "project.json"),
+    `${JSON.stringify(
+      { version: 1, name: "spine", createdAt: "2026-01-01T00:00:00.000Z" },
+      null,
+      2,
+    )}\n`,
+  );
+  await writeFile(
+    path.join(dir, "plan.graph.json"),
+    `${JSON.stringify({ version: 1, nodes, edges }, null, 2)}\n`,
+  );
+  await writeFile(
+    path.join(dir, "progress.json"),
+    `${JSON.stringify({ version: 1, entries: {} }, null, 2)}\n`,
+  );
+  for (const node of nodes) {
+    await writeFile(
+      path.join(dir, "nodes", `${node.id}.mdx`),
+      `# ${node.title}\n\nStart your notes here.\n`,
+    );
+  }
+  return dir;
 }
