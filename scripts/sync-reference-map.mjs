@@ -1,6 +1,6 @@
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fixtureDir = path.join(repoRoot, "fixtures/reference-map");
@@ -97,6 +97,19 @@ function setParent(parentOf, child, parent) {
   parentOf.set(child, parent);
 }
 
+function isSemanticParent(from, to) {
+  if (from.type === "title") {
+    return to.type === "topic" || to.type === "subtopic" || to.type === "paragraph";
+  }
+  if (from.type === "paragraph") {
+    return to.type === "topic" || to.type === "subtopic";
+  }
+  if (from.type === "topic" || from.type === "subtopic") {
+    return to.type === "subtopic";
+  }
+  return false;
+}
+
 async function loadRoadmap() {
   const response = await fetch(JSON_URL);
   if (!response.ok) {
@@ -145,9 +158,8 @@ function buildTree(data) {
     if (to.id === rootRemote) {
       continue;
     }
-    const preferTopic =
-      from.type === "topic" || from.type === "title" || from.type === "paragraph";
-    if (!preferTopic && from.type !== "subtopic") {
+    // Spine strokes on the source map join sibling topics; they are not parent edges.
+    if (!isSemanticParent(from, to)) {
       continue;
     }
     if (!parentOf.has(to.id) || from.type === "topic") {
@@ -182,17 +194,13 @@ function buildTree(data) {
     if (parentOf.has(topic.id) || topic.id === rootRemote) {
       continue;
     }
-    const above = [...paragraphs, ...topics]
-      .filter((node) => node.id !== topic.id && node.position.y < topic.position.y)
-      .sort((a, b) => {
-        const dyA = topic.position.y - a.position.y;
-        const dyB = topic.position.y - b.position.y;
-        const dxA = Math.abs(topic.position.x - a.position.x);
-        const dxB = Math.abs(topic.position.x - b.position.x);
-        return dyA + dxA * 0.25 - (dyB + dxB * 0.25);
-      });
-    const parent = above[0] ?? title;
-    setParent(parentOf, topic.id, parent.id);
+    // Section labels group leftover topics; parenting onto the topic above rebuilds the spine chain.
+    const above = paragraphs
+      .filter((node) => node.position.y < topic.position.y)
+      .sort(
+        (a, b) => topic.position.y - a.position.y - (topic.position.y - b.position.y),
+      );
+    setParent(parentOf, topic.id, (above[0] ?? title).id);
   }
 
   for (const paragraph of paragraphs) {
@@ -299,7 +307,13 @@ async function main() {
   );
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+const invokedDirectly =
+  Boolean(process.argv[1]) &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
+
+if (invokedDirectly) {
+  main().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}
