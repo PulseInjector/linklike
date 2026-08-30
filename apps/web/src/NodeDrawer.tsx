@@ -10,7 +10,7 @@ import {
   type ProgressWriteStatus,
 } from "@linklike/protocol";
 
-import { ApiError, fetchNode, updateProgress } from "./api";
+import { ApiError, fetchNode, updateProgress, writeNode } from "./api";
 
 const STATUS_LABEL: Record<ProgressStatus, string> = {
   learning: "Learning",
@@ -33,21 +33,25 @@ export function NodeDrawer({
   onStatusChange: (progress: Progress) => Promise<void> | void;
   onClose: () => void;
 }) {
-  const [markdown, setMarkdown] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState<ProgressWriteStatus | null>(null);
+  const [savingNote, setSavingNote] = useState(false);
 
   useEffect(() => {
     let active = true;
     setLoading(true);
+    setReady(false);
     setError(null);
-    setMarkdown(null);
+    setDraft("");
 
     fetchNode(path, nodeId)
       .then((content) => {
         if (active) {
-          setMarkdown(content);
+          setDraft(content);
+          setReady(true);
         }
       })
       .catch((err: unknown) => {
@@ -77,6 +81,19 @@ export function NodeDrawer({
       setError(err instanceof ApiError ? err.message : String(err));
     } finally {
       setSaving(null);
+    }
+  };
+
+  const saveNote = async () => {
+    setSavingNote(true);
+    setError(null);
+    try {
+      const written = await writeNode(path, nodeId, draft);
+      setDraft(written);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : String(err));
+    } finally {
+      setSavingNote(false);
     }
   };
 
@@ -120,11 +137,35 @@ export function NodeDrawer({
       )}
 
       <div className="drawer-body">
-        {loading && <p className="muted">Loading note…</p>}
-        {!loading && markdown !== null && (
-          <div className="markdown">
-            <Markdown>{markdown}</Markdown>
-          </div>
+        {loading && <p className="muted notes-loading">Loading note…</p>}
+        {!loading && ready && (
+          <>
+            <form
+              className="notes-editor-pane"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void saveNote();
+              }}
+            >
+              <label htmlFor="note-markdown">Markdown</label>
+              <textarea
+                id="note-markdown"
+                className="notes-editor"
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                spellCheck={false}
+                disabled={savingNote}
+              />
+              <button type="submit" disabled={savingNote}>
+                {savingNote ? "Saving…" : "Save"}
+              </button>
+            </form>
+            <div className="notes-preview">
+              <div className="notes-document">
+                <Markdown>{draft}</Markdown>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </aside>

@@ -173,6 +173,33 @@ export async function writeNodeMarkdown(
   await writeFile(path.join(projectDir, "nodes", `${nodeId}.mdx`), markdown);
 }
 
+export async function readNodeMarkdown(
+  projectDir: string,
+  nodeId: string,
+): Promise<string> {
+  return readFile(path.join(projectDir, "nodes", `${nodeId}.mdx`), "utf8");
+}
+
+export async function copyNotesProject(): Promise<string> {
+  const dir = await copySingleNodeProject();
+  await writeNodeMarkdown(
+    dir,
+    "root",
+    `# Heading one
+
+A paragraph of reading text.
+
+- First
+- Second
+
+\`\`\`
+const sample = 1;
+\`\`\`
+`,
+  );
+  return dir;
+}
+
 export async function corruptProjectJson(projectDir: string): Promise<void> {
   await writeFile(path.join(projectDir, "project.json"), "{ not valid json\n");
 }

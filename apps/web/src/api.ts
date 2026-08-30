@@ -64,6 +64,23 @@ export async function fetchNode(path: string, nodeId: string): Promise<string> {
   return body.markdown;
 }
 
+export async function writeNode(
+  path: string,
+  nodeId: string,
+  markdown: string,
+): Promise<string> {
+  const res = await fetch(`/api/project/nodes/${encodeURIComponent(nodeId)}`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ path, markdown }),
+  });
+  if (!res.ok) {
+    throw await parseError(res);
+  }
+  const body = (await res.json()) as { markdown: string };
+  return body.markdown;
+}
+
 export async function updateProgress(
   path: string,
   nodeId: string,

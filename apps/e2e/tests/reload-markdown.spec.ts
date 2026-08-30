@@ -8,7 +8,9 @@ test("reload refreshes open node markdown after disk edit", async ({ page }) => 
 
   await openProject(page, projectDir);
   await openNodeDrawer(page, "Minimal example");
-  await expect(page.locator(".drawer .markdown")).toContainText("Fixture project");
+  await expect(page.locator(".drawer .notes-document")).toContainText(
+    "Fixture project",
+  );
 
   await writeNodeMarkdown(
     projectDir,
@@ -17,7 +19,7 @@ test("reload refreshes open node markdown after disk edit", async ({ page }) => 
   );
 
   await page.getByRole("button", { name: "Reload" }).click();
-  await expect(page.locator(".drawer .markdown")).toContainText(
+  await expect(page.locator(".drawer .notes-document")).toContainText(
     "Updated on disk for e2e.",
   );
 });
