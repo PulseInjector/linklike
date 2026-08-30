@@ -5,15 +5,17 @@
   "description": "Local-first learning map that grows with you",
   "license": "MIT",
   "scripts": {
-    "dev": "pnpm --filter @linklike/web dev",
+    "dev": "pnpm -r --parallel --if-present dev",
     "build": "pnpm -r --if-present build",
     "lint": "pnpm -r --if-present lint",
     "check-types": "pnpm -r --if-present check-types",
     "format": "prettier --write \"**/*.{ts,tsx,js,mjs,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,json,md,yml,yaml}\"",
+    "lint:comments": "node scripts/lint-comments.mjs",
     "validate": "node packages/cli/bin/linklike.mjs validate fixtures/minimal-project",
     "test": "pnpm -r --if-present test",
-    "check": "pnpm lint && pnpm check-types && pnpm format:check && pnpm validate && pnpm test",
+    "test:e2e": "pnpm --filter @linklike/e2e test",
+    "check": "pnpm lint && pnpm check-types && pnpm lint:comments && pnpm format:check && pnpm validate && pnpm test",
     "prepare": "husky"
   },
   "devDependencies": {

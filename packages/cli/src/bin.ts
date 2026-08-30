@@ -1,7 +1,14 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { validateProjectDir } from "@linklike/core";
+import {
+  addNode,
+  isLinklikeError,
+  linklikeErrorMessage,
+  runCore,
+  setProgress,
+  validateProjectDir,
+} from "@linklike/core";
 import { PROGRESS_STATUSES } from "@linklike/protocol";
 
 function usage(): void {
@@ -11,6 +18,7 @@ Usage:
   linklike init <directory>
   linklike validate <directory> [--json]
   linklike progress set <directory> <nodeId> --status <${PROGRESS_STATUSES.join("|")}>
+  linklike node add <directory> --title <title> [--parent <nodeId>]
 `);
 }
 
@@ -19,7 +27,11 @@ function parseFlag(args: string[], flag: string): string | undefined {
   if (index === -1) {
     return undefined;
   }
-  return args[index + 1];
+  const value = args[index + 1];
+  if (value === undefined || value.startsWith("--")) {
+    throw new Error(`${flag} requires a value`);
+  }
+  return value;
 }
 
 async function initProject(targetDir: string): Promise<void> {
@@ -59,29 +71,6 @@ async function initProject(targetDir: string): Promise<void> {
   console.log(`Created project at ${targetDir}`);
 }
 
-async function setProgress(
-  targetDir: string,
-  nodeId: string,
-  status: string,
-): Promise<void> {
-  if (!PROGRESS_STATUSES.includes(status as (typeof PROGRESS_STATUSES)[number])) {
-    throw new Error(`status must be one of: ${PROGRESS_STATUSES.join(", ")}`);
-  }
-
-  const progressPath = path.join(targetDir, "progress.json");
-  const raw = await import("node:fs/promises").then((fs) =>
-    fs.readFile(progressPath, "utf8"),
-  );
-  const progress = JSON.parse(raw) as {
-    version: 1;
-    entries: Record<string, { status: string }>;
-  };
-
-  progress.entries[nodeId] = { status };
-  await writeFile(progressPath, `${JSON.stringify(progress, null, 2)}\n`);
-  console.log(`Set ${nodeId} → ${status}`);
-}
-
 async function main(): Promise<void> {
   const [, , command, ...rest] = process.argv;
 
@@ -105,7 +94,7 @@ async function main(): Promise<void> {
     if (!target) {
       throw new Error("validate requires a directory path");
     }
-    const result = await validateProjectDir(path.resolve(target));
+    const result = await runCore(validateProjectDir(path.resolve(target)));
     if (json) {
       console.log(JSON.stringify(result, null, 2));
     } else if (result.ok) {
@@ -121,6 +110,26 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (command === "node" && rest[0] === "add") {
+    const target = rest[1];
+    const title = parseFlag(rest, "--title");
+    const parent = parseFlag(rest, "--parent");
+    if (!target || !title) {
+      throw new Error(
+        "usage: linklike node add <directory> --title <title> [--parent <nodeId>]",
+      );
+    }
+    const result = await runCore(addNode(path.resolve(target), { title, parent }));
+    console.log(`Added node ${result.id}`);
+    if (parent) {
+      console.log(`Linked ${parent} → ${result.id}`);
+    }
+    if (result.nodeFileCreated) {
+      console.log(`Created nodes/${result.id}.mdx`);
+    }
+    return;
+  }
+
   if (command === "progress" && rest[0] === "set") {
     const target = rest[1];
     const nodeId = rest[2];
@@ -130,7 +139,8 @@ async function main(): Promise<void> {
         "usage: linklike progress set <directory> <nodeId> --status learning|done|skip",
       );
     }
-    await setProgress(path.resolve(target), nodeId, status);
+    await runCore(setProgress(path.resolve(target), nodeId, status));
+    console.log(`Set ${nodeId} → ${status}`);
     return;
   }
 
@@ -139,6 +149,10 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.message : String(error));
+  if (isLinklikeError(error)) {
+    console.error(linklikeErrorMessage(error));
+  } else {
+    console.error(error instanceof Error ? error.message : String(error));
+  }
   process.exitCode = 1;
 });

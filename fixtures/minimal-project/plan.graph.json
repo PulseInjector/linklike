@@ -4,7 +4,160 @@
     {
       "id": "root",
       "title": "Minimal example"
+    },
+    {
+      "id": "pod-basics",
+      "title": "Pod basics"
+    },
+    {
+      "id": "kubernetes-overview",
+      "title": "Kubernetes overview"
+    },
+    {
+      "id": "networking",
+      "title": "Networking"
+    },
+    {
+      "id": "storage",
+      "title": "Storage"
+    },
+    {
+      "id": "observability",
+      "title": "Observability"
+    },
+    {
+      "id": "workloads",
+      "title": "Workloads"
+    },
+    {
+      "id": "control-plane",
+      "title": "Control plane"
+    },
+    {
+      "id": "container-lifecycle",
+      "title": "Container lifecycle"
+    },
+    {
+      "id": "restart-policies",
+      "title": "Restart policies"
+    },
+    {
+      "id": "cluster-dns",
+      "title": "Cluster DNS"
+    },
+    {
+      "id": "service-types",
+      "title": "Service types"
+    },
+    {
+      "id": "ingress",
+      "title": "Ingress"
+    },
+    {
+      "id": "persistent-volumes",
+      "title": "Persistent volumes"
+    },
+    {
+      "id": "configmaps-secrets",
+      "title": "ConfigMaps & Secrets"
+    },
+    {
+      "id": "metrics-alerts",
+      "title": "Metrics & alerts"
+    },
+    {
+      "id": "logging",
+      "title": "Logging"
+    },
+    {
+      "id": "deployments",
+      "title": "Deployments"
+    },
+    {
+      "id": "replicasets",
+      "title": "ReplicaSets"
+    },
+    {
+      "id": "statefulsets",
+      "title": "StatefulSets"
     }
   ],
-  "edges": []
+  "edges": [
+    {
+      "from": "root",
+      "to": "pod-basics"
+    },
+    {
+      "from": "root",
+      "to": "kubernetes-overview"
+    },
+    {
+      "from": "root",
+      "to": "networking"
+    },
+    {
+      "from": "root",
+      "to": "storage"
+    },
+    {
+      "from": "root",
+      "to": "observability"
+    },
+    {
+      "from": "kubernetes-overview",
+      "to": "workloads"
+    },
+    {
+      "from": "kubernetes-overview",
+      "to": "control-plane"
+    },
+    {
+      "from": "pod-basics",
+      "to": "container-lifecycle"
+    },
+    {
+      "from": "pod-basics",
+      "to": "restart-policies"
+    },
+    {
+      "from": "networking",
+      "to": "cluster-dns"
+    },
+    {
+      "from": "networking",
+      "to": "service-types"
+    },
+    {
+      "from": "networking",
+      "to": "ingress"
+    },
+    {
+      "from": "storage",
+      "to": "persistent-volumes"
+    },
+    {
+      "from": "storage",
+      "to": "configmaps-secrets"
+    },
+    {
+      "from": "observability",
+      "to": "metrics-alerts"
+    },
+    {
+      "from": "observability",
+      "to": "logging"
+    },
+    {
+      "from": "kubernetes-overview",
+      "to": "deployments"
+    },
+    {
+      "from": "workloads",
+      "to": "replicasets"
+    },
+    {
+      "from": "workloads",
+      "to": "statefulsets"
+    }
+  ]
 }

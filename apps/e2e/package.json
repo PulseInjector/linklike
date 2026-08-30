@@ -1,0 +1,21 @@
+{
+  "name": "@linklike/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:repro": "playwright test audit-repros",
+    "test:race": "tsx scripts/progress-race.ts",
+    "test:race:graph": "tsx scripts/graph-progress-race.ts",
+    "install-browsers": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@types/node": "^24.3.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}

@@ -1,23 +1,25 @@
 {
-  "name": "@linklike/core",
+  "name": "@linklike/api",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "license": "MIT",
-  "exports": {
-    ".": "./src/index.ts"
-  },
   "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
     "check-types": "tsc -p tsconfig.json --noEmit",
     "lint": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
   },
   "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "@linklike/core": "workspace:*",
     "@linklike/protocol": "workspace:*",
-    "effect": "^3.19.3"
+    "hono": "^4.6.14"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",
+    "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "vitest": "^4.0.0"
   }
