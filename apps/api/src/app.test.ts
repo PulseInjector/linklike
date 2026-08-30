@@ -63,6 +63,8 @@ describe("api", () => {
       `/project/nodes/${encodeURIComponent("../../secret")}?path=${encodeURIComponent(fixtureDir)}`,
     );
     expect(res.status).toBe(404);
+    const body = (await res.json()) as { tag: string };
+    expect(body.tag).toBe("InvalidNodeId");
   });
 
   it("updates progress via PATCH", async () => {
@@ -93,6 +95,8 @@ describe("api", () => {
     });
 
     expect(res.status).toBe(400);
+    const body = (await res.json()) as { tag: string };
+    expect(body.tag).toBe("InvalidStatus");
   });
 });
 

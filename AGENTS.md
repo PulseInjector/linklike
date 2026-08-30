@@ -63,3 +63,13 @@ linklike node add . --title "Pod basics" --parent root
 
 - Do not add narrative comments to source code.
 - Match existing formatting; `pnpm format:check` must pass.
+
+## Effect (`@linklike/core`)
+
+Domain I/O lives in `@linklike/core` as `Effect` programs with tagged errors (`LinklikeError`).
+
+- Do not `throw` in `packages/core/`; fail with `Data.TaggedError` classes from `errors.ts`.
+- Do not use `instanceof Error` to branch on core failures; use `_tag` or `isLinklikeError`.
+- `Effect.runPromise` belongs at boundaries only (`packages/cli/`, `apps/api/`). Do not add `effect` to `apps/web/`.
+- `validateProjectDir` returns `ValidationResult` on the success channel (collect all issues). Mutations fail with `InvalidProject` when the tree is invalid.
+- New error tags need `linklikeErrorMessage`, API mapping in `apps/api/src/app.ts`, and CLI handling in `packages/cli/src/bin.ts`.

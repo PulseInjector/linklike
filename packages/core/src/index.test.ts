@@ -5,7 +5,7 @@ import path from "node:path";
 import { planGraphSchema } from "@linklike/protocol";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { addNode, loadProjectDir, setProgress } from "./index.js";
+import { addNode, loadProjectDir, runCore, setProgress } from "./index.js";
 
 const dirs: string[] = [];
 
@@ -39,7 +39,7 @@ describe("addNode", () => {
   it("appends a node, links the parent, and creates the stub", async () => {
     const dir = await makeProject();
 
-    const result = await addNode(dir, { title: "Pod basics", parent: "root" });
+    const result = await runCore(addNode(dir, { title: "Pod basics", parent: "root" }));
     expect(result.id).toBe("pod-basics");
     expect(result.nodeFileCreated).toBe(true);
 
@@ -52,29 +52,31 @@ describe("addNode", () => {
     const stub = await readFile(path.join(dir, "nodes", "pod-basics.mdx"), "utf8");
     expect(stub).toContain("# Pod basics");
 
-    const load = await loadProjectDir(dir);
-    expect(load.ok).toBe(true);
+    const load = await runCore(loadProjectDir(dir));
+    expect(load.project.name).toBe("t");
   });
 
   it("deduplicates ids from the same title", async () => {
     const dir = await makeProject();
-    const first = await addNode(dir, { title: "Networking" });
-    const second = await addNode(dir, { title: "Networking" });
+    const first = await runCore(addNode(dir, { title: "Networking" }));
+    const second = await runCore(addNode(dir, { title: "Networking" }));
     expect(first.id).toBe("networking");
     expect(second.id).toBe("networking-2");
   });
 
   it("rejects an unknown parent", async () => {
     const dir = await makeProject();
-    await expect(addNode(dir, { title: "X", parent: "nope" })).rejects.toThrow(
-      /unknown parent/,
-    );
+    await expect(
+      runCore(addNode(dir, { title: "X", parent: "nope" })),
+    ).rejects.toMatchObject({ _tag: "UnknownParent", parentId: "nope" });
   });
 
   it("refuses to mutate an invalid project", async () => {
     const dir = await makeProject();
     await rm(path.join(dir, "nodes", "root.mdx"));
-    await expect(addNode(dir, { title: "X" })).rejects.toThrow(/project is invalid/);
+    await expect(runCore(addNode(dir, { title: "X" }))).rejects.toMatchObject({
+      _tag: "InvalidProject",
+    });
     const graph = planGraphSchema.parse(
       JSON.parse(await readFile(path.join(dir, "plan.graph.json"), "utf8")),
     );
@@ -85,22 +87,25 @@ describe("addNode", () => {
 describe("setProgress", () => {
   it("updates an existing node's status", async () => {
     const dir = await makeProject();
-    const progress = await setProgress(dir, "root", "done");
+    const progress = await runCore(setProgress(dir, "root", "done"));
     expect(progress.entries.root.status).toBe("done");
   });
 
   it("rejects an unknown node", async () => {
     const dir = await makeProject();
-    await expect(setProgress(dir, "ghost", "done")).rejects.toThrow(/unknown node/);
+    await expect(runCore(setProgress(dir, "ghost", "done"))).rejects.toMatchObject({
+      _tag: "UnknownNode",
+      nodeId: "ghost",
+    });
   });
 
   it("does not lose updates when two nodes are set concurrently", async () => {
     const dir = await makeProject();
-    await addNode(dir, { title: "Second", parent: "root" });
+    await runCore(addNode(dir, { title: "Second", parent: "root" }));
 
     await Promise.all([
-      setProgress(dir, "root", "done"),
-      setProgress(dir, "second", "skip"),
+      runCore(setProgress(dir, "root", "done")),
+      runCore(setProgress(dir, "second", "skip")),
     ]);
 
     const progress = JSON.parse(

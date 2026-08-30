@@ -1,7 +1,15 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { addNode, setProgress, validateProjectDir } from "@linklike/core";
+import type { LinklikeError } from "@linklike/core";
+import {
+  addNode,
+  isLinklikeError,
+  linklikeErrorMessage,
+  runCore,
+  setProgress,
+  validateProjectDir,
+} from "@linklike/core";
 import { PROGRESS_STATUSES } from "@linklike/protocol";
 
 function usage(): void {
@@ -64,6 +72,12 @@ async function initProject(targetDir: string): Promise<void> {
   console.log(`Created project at ${targetDir}`);
 }
 
+async function runCoreCommand<A>(
+  effect: import("effect").Effect.Effect<A, LinklikeError>,
+): Promise<A> {
+  return runCore(effect);
+}
+
 async function main(): Promise<void> {
   const [, , command, ...rest] = process.argv;
 
@@ -87,7 +101,7 @@ async function main(): Promise<void> {
     if (!target) {
       throw new Error("validate requires a directory path");
     }
-    const result = await validateProjectDir(path.resolve(target));
+    const result = await runCoreCommand(validateProjectDir(path.resolve(target)));
     if (json) {
       console.log(JSON.stringify(result, null, 2));
     } else if (result.ok) {
@@ -112,7 +126,9 @@ async function main(): Promise<void> {
         "usage: linklike node add <directory> --title <title> [--parent <nodeId>]",
       );
     }
-    const result = await addNode(path.resolve(target), { title, parent });
+    const result = await runCoreCommand(
+      addNode(path.resolve(target), { title, parent }),
+    );
     console.log(`Added node ${result.id}`);
     if (parent) {
       console.log(`Linked ${parent} → ${result.id}`);
@@ -132,7 +148,7 @@ async function main(): Promise<void> {
         "usage: linklike progress set <directory> <nodeId> --status learning|done|skip",
       );
     }
-    await setProgress(path.resolve(target), nodeId, status);
+    await runCoreCommand(setProgress(path.resolve(target), nodeId, status));
     console.log(`Set ${nodeId} → ${status}`);
     return;
   }
@@ -142,6 +158,10 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.message : String(error));
+  if (isLinklikeError(error)) {
+    console.error(linklikeErrorMessage(error));
+  } else {
+    console.error(error instanceof Error ? error.message : String(error));
+  }
   process.exitCode = 1;
 });

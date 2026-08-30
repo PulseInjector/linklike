@@ -13,7 +13,8 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@linklike/protocol": "workspace:*"
+    "@linklike/protocol": "workspace:*",
+    "effect": "^3.19.3"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",

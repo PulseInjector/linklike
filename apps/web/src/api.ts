@@ -12,11 +12,13 @@ export interface ValidationIssue {
 }
 
 export class ApiError extends Error {
+  readonly tag: string | undefined;
   readonly issues: ValidationIssue[];
 
-  constructor(message: string, issues: ValidationIssue[] = []) {
+  constructor(message: string, issues: ValidationIssue[] = [], tag?: string) {
     super(message);
     this.name = "ApiError";
+    this.tag = tag;
     this.issues = issues;
   }
 }
@@ -24,12 +26,14 @@ export class ApiError extends Error {
 async function parseError(res: Response): Promise<ApiError> {
   try {
     const body = (await res.json()) as {
+      tag?: string;
       error?: string;
       issues?: ValidationIssue[];
     };
     return new ApiError(
       body.error ?? `request failed (${res.status})`,
       body.issues ?? [],
+      body.tag,
     );
   } catch {
     return new ApiError(`request failed (${res.status})`);
