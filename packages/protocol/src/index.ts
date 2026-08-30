@@ -1,7 +1,13 @@
 import { z } from "zod";
 
 export const PROGRESS_STATUSES = ["learning", "done", "skip"] as const;
+export const PROGRESS_CLEAR_STATUS = "pending" as const;
+export const PROGRESS_WRITE_STATUSES = [
+  ...PROGRESS_STATUSES,
+  PROGRESS_CLEAR_STATUS,
+] as const;
 export type ProgressStatus = (typeof PROGRESS_STATUSES)[number];
+export type ProgressWriteStatus = (typeof PROGRESS_WRITE_STATUSES)[number];
 
 export const projectSchema = z.object({
   version: z.literal(1),

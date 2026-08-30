@@ -1,0 +1,1571 @@
+{
+  "version": 1,
+  "nodes": [
+    {
+      "id": "data-engineer",
+      "title": "Data Engineer"
+    },
+    {
+      "id": "introduction",
+      "title": "Introduction"
+    },
+    {
+      "id": "what-is-data-engineering",
+      "title": "What is Data Engineering?"
+    },
+    {
+      "id": "data-engineering-vs-data-science",
+      "title": "Data Engineering vs Data Science"
+    },
+    {
+      "id": "skills-and-responsibilities",
+      "title": "Skills and Responsibilities"
+    },
+    {
+      "id": "data-engineering-lifecycle",
+      "title": "Data Engineering Lifecycle"
+    },
+    {
+      "id": "choosing-the-right-technologies",
+      "title": "Choosing the Right Technologies"
+    },
+    {
+      "id": "learn-the-basics",
+      "title": "Learn the Basics"
+    },
+    {
+      "id": "programming-skills",
+      "title": "Programming Skills"
+    },
+    {
+      "id": "python",
+      "title": "Python"
+    },
+    {
+      "id": "java",
+      "title": "Java"
+    },
+    {
+      "id": "scala",
+      "title": "Scala"
+    },
+    {
+      "id": "go",
+      "title": "Go"
+    },
+    {
+      "id": "data-structures-and-algorithms",
+      "title": "Data Structures and Algorithms"
+    },
+    {
+      "id": "git-and-github",
+      "title": "Git and GitHub"
+    },
+    {
+      "id": "linux-basics",
+      "title": "Linux Basics"
+    },
+    {
+      "id": "networking-fundamentals",
+      "title": "Networking Fundamentals"
+    },
+    {
+      "id": "data-generation-2",
+      "title": "Data Generation"
+    },
+    {
+      "id": "data-engineering-lifecycle-2",
+      "title": "Data Engineering Lifecycle"
+    },
+    {
+      "id": "data-generation",
+      "title": "Data Generation"
+    },
+    {
+      "id": "data-storage",
+      "title": "Data Storage"
+    },
+    {
+      "id": "data-ingestion",
+      "title": "Data Ingestion"
+    },
+    {
+      "id": "data-serving",
+      "title": "Data Serving"
+    },
+    {
+      "id": "distributed-systems-basics",
+      "title": "Distributed Systems Basics"
+    },
+    {
+      "id": "data-normalization",
+      "title": "Data Normalization"
+    },
+    {
+      "id": "data-modelling-techniques",
+      "title": "Data Modelling Techniques"
+    },
+    {
+      "id": "cap-theorem",
+      "title": "CAP Theorem"
+    },
+    {
+      "id": "oltp-vs-olap",
+      "title": "OLTP vs OLAP"
+    },
+    {
+      "id": "sources-of-data",
+      "title": "Sources of Data"
+    },
+    {
+      "id": "database",
+      "title": "Database"
+    },
+    {
+      "id": "apis",
+      "title": "APIs"
+    },
+    {
+      "id": "mobile-apps",
+      "title": "Mobile Apps"
+    },
+    {
+      "id": "data-collection-considerations",
+      "title": "Data Collection Considerations"
+    },
+    {
+      "id": "data-storage-2",
+      "title": "Data Storage"
+    },
+    {
+      "id": "database-fundamentals",
+      "title": "Database Fundamentals"
+    },
+    {
+      "id": "slowly-changing-dimension-scd",
+      "title": "Slowly Changing Dimension - SCD"
+    },
+    {
+      "id": "relational-databases",
+      "title": "Relational Databases"
+    },
+    {
+      "id": "document",
+      "title": "Document"
+    },
+    {
+      "id": "horizontal-vs-vertical-scaling",
+      "title": "Horizontal vs Vertical Scaling"
+    },
+    {
+      "id": "star-vs-snowflake-schema",
+      "title": "Star vs Snowflake Schema"
+    },
+    {
+      "id": "mongodb",
+      "title": "MongoDB"
+    },
+    {
+      "id": "elasticsearch",
+      "title": "ElasticSearch"
+    },
+    {
+      "id": "cosmosdb",
+      "title": "CosmosDB"
+    },
+    {
+      "id": "couchdb",
+      "title": "CouchDB"
+    },
+    {
+      "id": "column",
+      "title": "Column"
+    },
+    {
+      "id": "cassandra",
+      "title": "Cassandra"
+    },
+    {
+      "id": "bigtable",
+      "title": "BigTable"
+    },
+    {
+      "id": "hbase",
+      "title": "HBase"
+    },
+    {
+      "id": "nosql-databases",
+      "title": "NoSQL Databases"
+    },
+    {
+      "id": "graph",
+      "title": "Graph"
+    },
+    {
+      "id": "neo4j",
+      "title": "Neo4j"
+    },
+    {
+      "id": "neptune",
+      "title": "Neptune"
+    },
+    {
+      "id": "key-value",
+      "title": "Key-Value"
+    },
+    {
+      "id": "logs",
+      "title": "Logs"
+    },
+    {
+      "id": "iot",
+      "title": "IoT"
+    },
+    {
+      "id": "learn-sql",
+      "title": "Learn SQL"
+    },
+    {
+      "id": "indexing",
+      "title": "Indexing"
+    },
+    {
+      "id": "transactions",
+      "title": "Transactions"
+    },
+    {
+      "id": "mysql",
+      "title": "MySQL"
+    },
+    {
+      "id": "postgresql",
+      "title": "PostgreSQL"
+    },
+    {
+      "id": "mariadb",
+      "title": "MariaDB"
+    },
+    {
+      "id": "aurora-db",
+      "title": "Aurora DB"
+    },
+    {
+      "id": "oracle",
+      "title": "Oracle"
+    },
+    {
+      "id": "ms-sql",
+      "title": "MS SQL"
+    },
+    {
+      "id": "redis",
+      "title": "Redis"
+    },
+    {
+      "id": "memcached",
+      "title": "Memcached"
+    },
+    {
+      "id": "dynamodb",
+      "title": "DynamoDB"
+    },
+    {
+      "id": "data-warehousing",
+      "title": "Data Warehousing"
+    },
+    {
+      "id": "what-is-data-warehouse",
+      "title": "What is Data Warehouse?"
+    },
+    {
+      "id": "data-warehousing-architectures",
+      "title": "Data Warehousing Architectures"
+    },
+    {
+      "id": "data-mart",
+      "title": "Data Mart"
+    },
+    {
+      "id": "data-warehouse",
+      "title": "Data Warehouse"
+    },
+    {
+      "id": "data-mesh",
+      "title": "Data Mesh"
+    },
+    {
+      "id": "data-hub",
+      "title": "Data Hub"
+    },
+    {
+      "id": "data-lake",
+      "title": "Data Lake"
+    },
+    {
+      "id": "google-bigquery",
+      "title": "Google BigQuery"
+    },
+    {
+      "id": "snowflake",
+      "title": "Snowflake"
+    },
+    {
+      "id": "amazon-redshift",
+      "title": "Amazon Redshift"
+    },
+    {
+      "id": "databricks-delta-lake",
+      "title": "Databricks Delta Lake"
+    },
+    {
+      "id": "snowflake-2",
+      "title": "Snowflake"
+    },
+    {
+      "id": "onehouse",
+      "title": "Onehouse"
+    },
+    {
+      "id": "cloud-computing",
+      "title": "Cloud Computing"
+    },
+    {
+      "id": "data-ingestion-2",
+      "title": "Data Ingestion"
+    },
+    {
+      "id": "types-of-data-ingestion",
+      "title": "Types of Data Ingestion"
+    },
+    {
+      "id": "data-fabric",
+      "title": "Data Fabric"
+    },
+    {
+      "id": "metadata-first-architecture",
+      "title": "Metadata-first Architecture"
+    },
+    {
+      "id": "serverless-options",
+      "title": "Serverless Options"
+    },
+    {
+      "id": "cloud-architectures",
+      "title": "Cloud Architectures"
+    },
+    {
+      "id": "amazon-ec2-compute",
+      "title": "Amazon EC2 ( Compute)"
+    },
+    {
+      "id": "s3-storage",
+      "title": "S3 (Storage)"
+    },
+    {
+      "id": "amazon-rds-database",
+      "title": "Amazon RDS (Database)"
+    },
+    {
+      "id": "batch",
+      "title": "Batch"
+    },
+    {
+      "id": "glue-etl",
+      "title": "Glue (ETL)"
+    },
+    {
+      "id": "hybrid",
+      "title": "Hybrid"
+    },
+    {
+      "id": "realtime",
+      "title": "Realtime"
+    },
+    {
+      "id": "azure-virtual-machines",
+      "title": "Azure Virtual Machines"
+    },
+    {
+      "id": "azure-blob-storage",
+      "title": "Azure Blob Storage"
+    },
+    {
+      "id": "azure-sql-database",
+      "title": "Azure SQL Database"
+    },
+    {
+      "id": "data-factory-etl",
+      "title": "Data Factory (ETL)"
+    },
+    {
+      "id": "compute-engine-compute",
+      "title": "Compute Engine (Compute)"
+    },
+    {
+      "id": "google-cloud-storage",
+      "title": "Google Cloud Storage"
+    },
+    {
+      "id": "cloud-sql-database",
+      "title": "Cloud SQL (Database)"
+    },
+    {
+      "id": "dataflow",
+      "title": "Dataflow"
+    },
+    {
+      "id": "data-pipelines",
+      "title": "Data Pipelines"
+    },
+    {
+      "id": "extract-data",
+      "title": "Extract Data"
+    },
+    {
+      "id": "transform-data",
+      "title": "Transform Data"
+    },
+    {
+      "id": "load-data",
+      "title": "Load Data"
+    },
+    {
+      "id": "apache-airflow",
+      "title": "Apache Airflow"
+    },
+    {
+      "id": "dbt",
+      "title": "dbt"
+    },
+    {
+      "id": "luigi",
+      "title": "Luigi"
+    },
+    {
+      "id": "prefect",
+      "title": "Prefect"
+    },
+    {
+      "id": "cluster-computing-basics",
+      "title": "Cluster Computing Basics"
+    },
+    {
+      "id": "what-is-cluster-computing",
+      "title": "What is Cluster Computing"
+    },
+    {
+      "id": "distributed-file-systems",
+      "title": "Distributed File Systems"
+    },
+    {
+      "id": "hdfs",
+      "title": "HDFS"
+    },
+    {
+      "id": "job-scheduling",
+      "title": "Job Scheduling"
+    },
+    {
+      "id": "cluster-management-tools",
+      "title": "Cluster Management Tools"
+    },
+    {
+      "id": "kubernetes",
+      "title": "Kubernetes"
+    },
+    {
+      "id": "apache-hadoop-yarn",
+      "title": "Apache Hadoop YARN"
+    },
+    {
+      "id": "docker",
+      "title": "Docker"
+    },
+    {
+      "id": "big-data-tools",
+      "title": "Big Data Tools"
+    },
+    {
+      "id": "apache-spark",
+      "title": "Apache Spark"
+    },
+    {
+      "id": "containers-orchestration",
+      "title": "Containers & Orchestration"
+    },
+    {
+      "id": "kubernetes-2",
+      "title": "Kubernetes"
+    },
+    {
+      "id": "hdfs-2",
+      "title": "HDFS"
+    },
+    {
+      "id": "yarn",
+      "title": "YARN"
+    },
+    {
+      "id": "google-cloud-gke",
+      "title": "Google Cloud GKE"
+    },
+    {
+      "id": "mapreduce",
+      "title": "MapReduce"
+    },
+    {
+      "id": "aws-eks",
+      "title": "AWS EKS"
+    },
+    {
+      "id": "ci-cd",
+      "title": "CI/CD"
+    },
+    {
+      "id": "github-actions",
+      "title": "GitHub Actions"
+    },
+    {
+      "id": "gitlab-ci",
+      "title": "GitLab CI"
+    },
+    {
+      "id": "monitoring",
+      "title": "Monitoring"
+    },
+    {
+      "id": "prometheus",
+      "title": "Prometheus"
+    },
+    {
+      "id": "circle-ci",
+      "title": "Circle CI"
+    },
+    {
+      "id": "datadog",
+      "title": "Datadog"
+    },
+    {
+      "id": "sentry",
+      "title": "Sentry"
+    },
+    {
+      "id": "argocd",
+      "title": "ArgoCD"
+    },
+    {
+      "id": "new-relic",
+      "title": "New Relic"
+    },
+    {
+      "id": "testing",
+      "title": "Testing"
+    },
+    {
+      "id": "unit-testing",
+      "title": "Unit Testing"
+    },
+    {
+      "id": "integration-testing",
+      "title": "Integration Testing"
+    },
+    {
+      "id": "end-to-end-testing",
+      "title": "End-to-End Testing"
+    },
+    {
+      "id": "functional-testing",
+      "title": "Functional Testing"
+    },
+    {
+      "id": "a-b-testing",
+      "title": "A/B Testing"
+    },
+    {
+      "id": "load-testing",
+      "title": "Load Testing"
+    },
+    {
+      "id": "smoke-testing",
+      "title": "Smoke Testing"
+    },
+    {
+      "id": "messaging-systems",
+      "title": "Messaging Systems"
+    },
+    {
+      "id": "what-and-why-use-them",
+      "title": "What and why use them?"
+    },
+    {
+      "id": "async-vs-sync-communication",
+      "title": "Async vs Sync Communication"
+    },
+    {
+      "id": "messages-vs-streams",
+      "title": "Messages vs Streams"
+    },
+    {
+      "id": "best-practices",
+      "title": "Best Practices"
+    },
+    {
+      "id": "infrastructure-as-code-iac",
+      "title": "Infrastructure as Code - IaC"
+    },
+    {
+      "id": "declarative-vs-imperative",
+      "title": "Declarative vs Imperative"
+    },
+    {
+      "id": "idempotency",
+      "title": "Idempotency"
+    },
+    {
+      "id": "reusability",
+      "title": "Reusability"
+    },
+    {
+      "id": "environmental-management",
+      "title": "Environmental Management"
+    },
+    {
+      "id": "data-serving-2",
+      "title": "Data Serving"
+    },
+    {
+      "id": "data-analytics",
+      "title": "Data Analytics"
+    },
+    {
+      "id": "apache-kafka",
+      "title": "Apache Kafka"
+    },
+    {
+      "id": "rabbitmq",
+      "title": "RabbitMQ"
+    },
+    {
+      "id": "aws-sqs",
+      "title": "AWS SQS"
+    },
+    {
+      "id": "aws-sns",
+      "title": "AWS SNS"
+    },
+    {
+      "id": "business-intelligence",
+      "title": "Business Intelligence"
+    },
+    {
+      "id": "microsoft-power-bi",
+      "title": "Microsoft Power BI"
+    },
+    {
+      "id": "streamlit",
+      "title": "Streamlit"
+    },
+    {
+      "id": "tableu",
+      "title": "Tableu"
+    },
+    {
+      "id": "looker",
+      "title": "Looker"
+    },
+    {
+      "id": "authentication-vs-authorization",
+      "title": "Authentication vs Authorization"
+    },
+    {
+      "id": "terraform",
+      "title": "Terraform"
+    },
+    {
+      "id": "opentofu",
+      "title": "OpenTofu"
+    },
+    {
+      "id": "aws-cdk",
+      "title": "AWS CDK"
+    },
+    {
+      "id": "google-deployment-mgr",
+      "title": "Google Deployment  Mgr."
+    },
+    {
+      "id": "encryption",
+      "title": "Encryption"
+    },
+    {
+      "id": "tokenization",
+      "title": "Tokenization"
+    },
+    {
+      "id": "data-masking",
+      "title": "Data Masking"
+    },
+    {
+      "id": "security",
+      "title": "Security"
+    },
+    {
+      "id": "data-obfuscation",
+      "title": "Data Obfuscation"
+    },
+    {
+      "id": "data-quality",
+      "title": "Data Quality"
+    },
+    {
+      "id": "data-lineage",
+      "title": "Data Lineage"
+    },
+    {
+      "id": "metadata-management",
+      "title": "Metadata Management"
+    },
+    {
+      "id": "data-interoperability",
+      "title": "Data Interoperability"
+    },
+    {
+      "id": "data-quality-2",
+      "title": "Data Quality"
+    },
+    {
+      "id": "reverse-etl",
+      "title": "Reverse ETL"
+    },
+    {
+      "id": "etl-vs-reverse-etl",
+      "title": "ETL vs Reverse ETL"
+    },
+    {
+      "id": "reverse-etl-usecases",
+      "title": "Reverse ETL Usecases"
+    },
+    {
+      "id": "hightouch",
+      "title": "Hightouch"
+    },
+    {
+      "id": "census",
+      "title": "Census"
+    },
+    {
+      "id": "segment",
+      "title": "Segment"
+    },
+    {
+      "id": "data-governance",
+      "title": "Data Governance"
+    },
+    {
+      "id": "privacy",
+      "title": "Privacy"
+    },
+    {
+      "id": "machine-learning",
+      "title": "Machine Learning"
+    },
+    {
+      "id": "gdpr",
+      "title": "GDPR"
+    },
+    {
+      "id": "ecpa",
+      "title": "ECPA"
+    },
+    {
+      "id": "eu-ai-act",
+      "title": "EU AI Act"
+    },
+    {
+      "id": "mlops",
+      "title": "MLOps"
+    }
+  ],
+  "edges": [
+    {
+      "from": "data-engineer",
+      "to": "introduction"
+    },
+    {
+      "from": "data-engineer",
+      "to": "learn-the-basics"
+    },
+    {
+      "from": "data-engineer",
+      "to": "data-generation-2"
+    },
+    {
+      "from": "data-engineer",
+      "to": "data-storage-2"
+    },
+    {
+      "from": "data-engineer",
+      "to": "data-warehousing"
+    },
+    {
+      "from": "data-engineer",
+      "to": "data-ingestion-2"
+    },
+    {
+      "from": "data-engineer",
+      "to": "data-serving-2"
+    },
+    {
+      "from": "data-engineer",
+      "to": "security"
+    },
+    {
+      "from": "data-engineer",
+      "to": "data-governance"
+    },
+    {
+      "from": "data-engineer",
+      "to": "privacy"
+    },
+    {
+      "from": "introduction",
+      "to": "what-is-data-engineering"
+    },
+    {
+      "from": "introduction",
+      "to": "data-engineering-vs-data-science"
+    },
+    {
+      "from": "introduction",
+      "to": "skills-and-responsibilities"
+    },
+    {
+      "from": "introduction",
+      "to": "data-engineering-lifecycle"
+    },
+    {
+      "from": "introduction",
+      "to": "choosing-the-right-technologies"
+    },
+    {
+      "from": "learn-the-basics",
+      "to": "programming-skills"
+    },
+    {
+      "from": "learn-the-basics",
+      "to": "data-structures-and-algorithms"
+    },
+    {
+      "from": "learn-the-basics",
+      "to": "git-and-github"
+    },
+    {
+      "from": "learn-the-basics",
+      "to": "linux-basics"
+    },
+    {
+      "from": "learn-the-basics",
+      "to": "networking-fundamentals"
+    },
+    {
+      "from": "programming-skills",
+      "to": "python"
+    },
+    {
+      "from": "programming-skills",
+      "to": "java"
+    },
+    {
+      "from": "programming-skills",
+      "to": "scala"
+    },
+    {
+      "from": "programming-skills",
+      "to": "go"
+    },
+    {
+      "from": "data-generation-2",
+      "to": "data-engineering-lifecycle-2"
+    },
+    {
+      "from": "data-generation-2",
+      "to": "distributed-systems-basics"
+    },
+    {
+      "from": "data-generation-2",
+      "to": "sources-of-data"
+    },
+    {
+      "from": "data-generation-2",
+      "to": "data-collection-considerations"
+    },
+    {
+      "from": "data-engineering-lifecycle-2",
+      "to": "data-generation"
+    },
+    {
+      "from": "data-engineering-lifecycle-2",
+      "to": "data-storage"
+    },
+    {
+      "from": "data-engineering-lifecycle-2",
+      "to": "data-ingestion"
+    },
+    {
+      "from": "data-engineering-lifecycle-2",
+      "to": "data-serving"
+    },
+    {
+      "from": "distributed-systems-basics",
+      "to": "data-normalization"
+    },
+    {
+      "from": "distributed-systems-basics",
+      "to": "data-modelling-techniques"
+    },
+    {
+      "from": "distributed-systems-basics",
+      "to": "cap-theorem"
+    },
+    {
+      "from": "distributed-systems-basics",
+      "to": "oltp-vs-olap"
+    },
+    {
+      "from": "sources-of-data",
+      "to": "database"
+    },
+    {
+      "from": "sources-of-data",
+      "to": "apis"
+    },
+    {
+      "from": "sources-of-data",
+      "to": "mobile-apps"
+    },
+    {
+      "from": "data-storage-2",
+      "to": "database-fundamentals"
+    },
+    {
+      "from": "data-storage-2",
+      "to": "relational-databases"
+    },
+    {
+      "from": "data-storage-2",
+      "to": "document"
+    },
+    {
+      "from": "data-storage-2",
+      "to": "column"
+    },
+    {
+      "from": "data-storage-2",
+      "to": "nosql-databases"
+    },
+    {
+      "from": "data-storage-2",
+      "to": "graph"
+    },
+    {
+      "from": "data-storage-2",
+      "to": "key-value"
+    },
+    {
+      "from": "database-fundamentals",
+      "to": "slowly-changing-dimension-scd"
+    },
+    {
+      "from": "document",
+      "to": "horizontal-vs-vertical-scaling"
+    },
+    {
+      "from": "document",
+      "to": "star-vs-snowflake-schema"
+    },
+    {
+      "from": "document",
+      "to": "mongodb"
+    },
+    {
+      "from": "document",
+      "to": "elasticsearch"
+    },
+    {
+      "from": "document",
+      "to": "cosmosdb"
+    },
+    {
+      "from": "document",
+      "to": "couchdb"
+    },
+    {
+      "from": "column",
+      "to": "cassandra"
+    },
+    {
+      "from": "column",
+      "to": "bigtable"
+    },
+    {
+      "from": "column",
+      "to": "hbase"
+    },
+    {
+      "from": "graph",
+      "to": "neo4j"
+    },
+    {
+      "from": "graph",
+      "to": "neptune"
+    },
+    {
+      "from": "key-value",
+      "to": "logs"
+    },
+    {
+      "from": "key-value",
+      "to": "iot"
+    },
+    {
+      "from": "key-value",
+      "to": "learn-sql"
+    },
+    {
+      "from": "key-value",
+      "to": "indexing"
+    },
+    {
+      "from": "key-value",
+      "to": "transactions"
+    },
+    {
+      "from": "key-value",
+      "to": "mysql"
+    },
+    {
+      "from": "key-value",
+      "to": "postgresql"
+    },
+    {
+      "from": "key-value",
+      "to": "mariadb"
+    },
+    {
+      "from": "key-value",
+      "to": "aurora-db"
+    },
+    {
+      "from": "key-value",
+      "to": "oracle"
+    },
+    {
+      "from": "key-value",
+      "to": "ms-sql"
+    },
+    {
+      "from": "key-value",
+      "to": "redis"
+    },
+    {
+      "from": "key-value",
+      "to": "memcached"
+    },
+    {
+      "from": "key-value",
+      "to": "dynamodb"
+    },
+    {
+      "from": "data-warehousing",
+      "to": "what-is-data-warehouse"
+    },
+    {
+      "from": "data-warehousing",
+      "to": "data-warehousing-architectures"
+    },
+    {
+      "from": "data-warehousing",
+      "to": "data-warehouse"
+    },
+    {
+      "from": "data-warehousing",
+      "to": "data-mesh"
+    },
+    {
+      "from": "data-warehousing",
+      "to": "data-lake"
+    },
+    {
+      "from": "data-warehousing",
+      "to": "cloud-computing"
+    },
+    {
+      "from": "data-warehousing-architectures",
+      "to": "data-mart"
+    },
+    {
+      "from": "data-mesh",
+      "to": "data-hub"
+    },
+    {
+      "from": "data-lake",
+      "to": "google-bigquery"
+    },
+    {
+      "from": "data-lake",
+      "to": "snowflake"
+    },
+    {
+      "from": "data-lake",
+      "to": "amazon-redshift"
+    },
+    {
+      "from": "data-lake",
+      "to": "databricks-delta-lake"
+    },
+    {
+      "from": "data-lake",
+      "to": "snowflake-2"
+    },
+    {
+      "from": "data-lake",
+      "to": "onehouse"
+    },
+    {
+      "from": "data-ingestion-2",
+      "to": "types-of-data-ingestion"
+    },
+    {
+      "from": "data-ingestion-2",
+      "to": "data-pipelines"
+    },
+    {
+      "from": "data-ingestion-2",
+      "to": "cluster-computing-basics"
+    },
+    {
+      "from": "data-ingestion-2",
+      "to": "big-data-tools"
+    },
+    {
+      "from": "data-ingestion-2",
+      "to": "containers-orchestration"
+    },
+    {
+      "from": "data-ingestion-2",
+      "to": "ci-cd"
+    },
+    {
+      "from": "data-ingestion-2",
+      "to": "monitoring"
+    },
+    {
+      "from": "data-ingestion-2",
+      "to": "testing"
+    },
+    {
+      "from": "data-ingestion-2",
+      "to": "messaging-systems"
+    },
+    {
+      "from": "data-ingestion-2",
+      "to": "infrastructure-as-code-iac"
+    },
+    {
+      "from": "types-of-data-ingestion",
+      "to": "data-fabric"
+    },
+    {
+      "from": "types-of-data-ingestion",
+      "to": "metadata-first-architecture"
+    },
+    {
+      "from": "types-of-data-ingestion",
+      "to": "serverless-options"
+    },
+    {
+      "from": "types-of-data-ingestion",
+      "to": "cloud-architectures"
+    },
+    {
+      "from": "types-of-data-ingestion",
+      "to": "amazon-ec2-compute"
+    },
+    {
+      "from": "types-of-data-ingestion",
+      "to": "s3-storage"
+    },
+    {
+      "from": "types-of-data-ingestion",
+      "to": "amazon-rds-database"
+    },
+    {
+      "from": "types-of-data-ingestion",
+      "to": "batch"
+    },
+    {
+      "from": "types-of-data-ingestion",
+      "to": "glue-etl"
+    },
+    {
+      "from": "types-of-data-ingestion",
+      "to": "hybrid"
+    },
+    {
+      "from": "types-of-data-ingestion",
+      "to": "realtime"
+    },
+    {
+      "from": "types-of-data-ingestion",
+      "to": "azure-virtual-machines"
+    },
+    {
+      "from": "types-of-data-ingestion",
+      "to": "azure-blob-storage"
+    },
+    {
+      "from": "types-of-data-ingestion",
+      "to": "azure-sql-database"
+    },
+    {
+      "from": "types-of-data-ingestion",
+      "to": "data-factory-etl"
+    },
+    {
+      "from": "types-of-data-ingestion",
+      "to": "compute-engine-compute"
+    },
+    {
+      "from": "types-of-data-ingestion",
+      "to": "google-cloud-storage"
+    },
+    {
+      "from": "types-of-data-ingestion",
+      "to": "cloud-sql-database"
+    },
+    {
+      "from": "types-of-data-ingestion",
+      "to": "dataflow"
+    },
+    {
+      "from": "data-pipelines",
+      "to": "extract-data"
+    },
+    {
+      "from": "data-pipelines",
+      "to": "transform-data"
+    },
+    {
+      "from": "data-pipelines",
+      "to": "load-data"
+    },
+    {
+      "from": "data-pipelines",
+      "to": "apache-airflow"
+    },
+    {
+      "from": "data-pipelines",
+      "to": "dbt"
+    },
+    {
+      "from": "data-pipelines",
+      "to": "luigi"
+    },
+    {
+      "from": "data-pipelines",
+      "to": "prefect"
+    },
+    {
+      "from": "cluster-computing-basics",
+      "to": "what-is-cluster-computing"
+    },
+    {
+      "from": "cluster-computing-basics",
+      "to": "distributed-file-systems"
+    },
+    {
+      "from": "cluster-computing-basics",
+      "to": "hdfs"
+    },
+    {
+      "from": "cluster-computing-basics",
+      "to": "job-scheduling"
+    },
+    {
+      "from": "cluster-computing-basics",
+      "to": "cluster-management-tools"
+    },
+    {
+      "from": "cluster-computing-basics",
+      "to": "kubernetes"
+    },
+    {
+      "from": "cluster-computing-basics",
+      "to": "apache-hadoop-yarn"
+    },
+    {
+      "from": "cluster-computing-basics",
+      "to": "docker"
+    },
+    {
+      "from": "big-data-tools",
+      "to": "apache-spark"
+    },
+    {
+      "from": "containers-orchestration",
+      "to": "kubernetes-2"
+    },
+    {
+      "from": "containers-orchestration",
+      "to": "hdfs-2"
+    },
+    {
+      "from": "containers-orchestration",
+      "to": "yarn"
+    },
+    {
+      "from": "containers-orchestration",
+      "to": "google-cloud-gke"
+    },
+    {
+      "from": "containers-orchestration",
+      "to": "mapreduce"
+    },
+    {
+      "from": "containers-orchestration",
+      "to": "aws-eks"
+    },
+    {
+      "from": "ci-cd",
+      "to": "github-actions"
+    },
+    {
+      "from": "ci-cd",
+      "to": "gitlab-ci"
+    },
+    {
+      "from": "monitoring",
+      "to": "prometheus"
+    },
+    {
+      "from": "monitoring",
+      "to": "circle-ci"
+    },
+    {
+      "from": "monitoring",
+      "to": "datadog"
+    },
+    {
+      "from": "monitoring",
+      "to": "sentry"
+    },
+    {
+      "from": "monitoring",
+      "to": "argocd"
+    },
+    {
+      "from": "monitoring",
+      "to": "new-relic"
+    },
+    {
+      "from": "testing",
+      "to": "unit-testing"
+    },
+    {
+      "from": "testing",
+      "to": "integration-testing"
+    },
+    {
+      "from": "testing",
+      "to": "end-to-end-testing"
+    },
+    {
+      "from": "testing",
+      "to": "functional-testing"
+    },
+    {
+      "from": "testing",
+      "to": "a-b-testing"
+    },
+    {
+      "from": "testing",
+      "to": "load-testing"
+    },
+    {
+      "from": "testing",
+      "to": "smoke-testing"
+    },
+    {
+      "from": "messaging-systems",
+      "to": "what-and-why-use-them"
+    },
+    {
+      "from": "messaging-systems",
+      "to": "async-vs-sync-communication"
+    },
+    {
+      "from": "messaging-systems",
+      "to": "messages-vs-streams"
+    },
+    {
+      "from": "messaging-systems",
+      "to": "best-practices"
+    },
+    {
+      "from": "infrastructure-as-code-iac",
+      "to": "declarative-vs-imperative"
+    },
+    {
+      "from": "infrastructure-as-code-iac",
+      "to": "idempotency"
+    },
+    {
+      "from": "infrastructure-as-code-iac",
+      "to": "reusability"
+    },
+    {
+      "from": "infrastructure-as-code-iac",
+      "to": "environmental-management"
+    },
+    {
+      "from": "data-serving-2",
+      "to": "data-analytics"
+    },
+    {
+      "from": "data-serving-2",
+      "to": "business-intelligence"
+    },
+    {
+      "from": "data-serving-2",
+      "to": "authentication-vs-authorization"
+    },
+    {
+      "from": "data-serving-2",
+      "to": "encryption"
+    },
+    {
+      "from": "data-serving-2",
+      "to": "tokenization"
+    },
+    {
+      "from": "data-serving-2",
+      "to": "data-masking"
+    },
+    {
+      "from": "data-analytics",
+      "to": "apache-kafka"
+    },
+    {
+      "from": "data-analytics",
+      "to": "rabbitmq"
+    },
+    {
+      "from": "data-analytics",
+      "to": "aws-sqs"
+    },
+    {
+      "from": "data-analytics",
+      "to": "aws-sns"
+    },
+    {
+      "from": "business-intelligence",
+      "to": "microsoft-power-bi"
+    },
+    {
+      "from": "business-intelligence",
+      "to": "streamlit"
+    },
+    {
+      "from": "business-intelligence",
+      "to": "tableu"
+    },
+    {
+      "from": "business-intelligence",
+      "to": "looker"
+    },
+    {
+      "from": "authentication-vs-authorization",
+      "to": "terraform"
+    },
+    {
+      "from": "authentication-vs-authorization",
+      "to": "opentofu"
+    },
+    {
+      "from": "authentication-vs-authorization",
+      "to": "aws-cdk"
+    },
+    {
+      "from": "authentication-vs-authorization",
+      "to": "google-deployment-mgr"
+    },
+    {
+      "from": "security",
+      "to": "data-obfuscation"
+    },
+    {
+      "from": "security",
+      "to": "reverse-etl"
+    },
+    {
+      "from": "data-obfuscation",
+      "to": "data-quality"
+    },
+    {
+      "from": "data-obfuscation",
+      "to": "data-lineage"
+    },
+    {
+      "from": "data-obfuscation",
+      "to": "metadata-management"
+    },
+    {
+      "from": "data-obfuscation",
+      "to": "data-interoperability"
+    },
+    {
+      "from": "data-obfuscation",
+      "to": "data-quality-2"
+    },
+    {
+      "from": "reverse-etl",
+      "to": "etl-vs-reverse-etl"
+    },
+    {
+      "from": "reverse-etl",
+      "to": "reverse-etl-usecases"
+    },
+    {
+      "from": "reverse-etl",
+      "to": "hightouch"
+    },
+    {
+      "from": "reverse-etl",
+      "to": "census"
+    },
+    {
+      "from": "reverse-etl",
+      "to": "segment"
+    },
+    {
+      "from": "privacy",
+      "to": "machine-learning"
+    },
+    {
+      "from": "privacy",
+      "to": "mlops"
+    },
+    {
+      "from": "machine-learning",
+      "to": "gdpr"
+    },
+    {
+      "from": "machine-learning",
+      "to": "ecpa"
+    },
+    {
+      "from": "machine-learning",
+      "to": "eu-ai-act"
+    }
+  ]
+}

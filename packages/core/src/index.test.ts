@@ -91,6 +91,13 @@ describe("setProgress", () => {
     expect(progress.entries.root.status).toBe("done");
   });
 
+  it("clears a status back to unset when written as pending", async () => {
+    const dir = await makeProject();
+    await runCore(setProgress(dir, "root", "done"));
+    const progress = await runCore(setProgress(dir, "root", "pending"));
+    expect(progress.entries.root).toBeUndefined();
+  });
+
   it("rejects an unknown node", async () => {
     const dir = await makeProject();
     await expect(runCore(setProgress(dir, "ghost", "done"))).rejects.toMatchObject({

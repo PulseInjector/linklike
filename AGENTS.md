@@ -11,6 +11,8 @@
 | `apps/e2e/`                 | Playwright e2e and race reproduction scripts         |
 | `apps/web/`                 | Browser UI (Vite + React)                            |
 | `fixtures/minimal-project/` | Golden project; must pass `pnpm validate`            |
+| `fixtures/reference-map/`   | Larger Data Engineer tree; `pnpm sync:reference-map` |
+| `design/learning-map/`      | Map tokens, CSS variables, and reference clips       |
 | `.github/`                  | CI, issue templates, pull request template           |
 | `CONTRIBUTING.md`           | Contribution workflow; which issue template to use   |
 

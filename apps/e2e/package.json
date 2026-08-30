@@ -10,7 +10,8 @@
     "test:repro": "playwright test audit-repros",
     "test:race": "tsx scripts/progress-race.ts",
     "test:race:graph": "tsx scripts/graph-progress-race.ts",
-    "install-browsers": "playwright install chromium"
+    "install-browsers": "playwright install chromium",
+    "capture:design": "tsx scripts/capture-design.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",

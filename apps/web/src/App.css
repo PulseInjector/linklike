@@ -1,12 +1,4 @@
-:root {
-  --bg: #0f172a;
-  --panel: #1e293b;
-  --border: #334155;
-  --text: #e2e8f0;
-  --muted: #94a3b8;
-  --accent: #6366f1;
-  --danger: #f87171;
-}
+@import "../../../design/learning-map/tokens.css";
 
 * {
   box-sizing: border-box;
@@ -20,7 +12,7 @@ body,
 }
 
 body {
-  font-family: system-ui, sans-serif;
+  font-family: var(--map-font-family);
   background: var(--bg);
   color: var(--text);
 }
@@ -169,6 +161,106 @@ button.secondary {
 
 .react-flow {
   background: var(--bg);
+}
+
+.react-flow__node {
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  font-size: inherit;
+  color: inherit;
+}
+
+.react-flow__node-section {
+  pointer-events: none;
+}
+
+.map-node-wrap {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.map-node {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-family: var(--map-font-family);
+  font-size: var(--map-font-size);
+  border: var(--map-node-border-width) solid var(--map-node-border);
+  border-radius: var(--map-node-radius);
+  padding: var(--map-node-padding);
+  box-sizing: border-box;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.map-node--topic {
+  background: var(--map-topic-bg);
+  color: var(--map-topic-color);
+}
+
+.map-node--subtopic {
+  background: var(--map-subtopic-bg);
+  color: var(--map-subtopic-color);
+}
+
+.map-node.is-selected {
+  outline: 2px solid var(--map-selected-ring);
+  outline-offset: 2px;
+}
+
+.map-node.is-done {
+  background: var(--map-status-done-bg);
+  color: var(--map-status-done-color);
+  text-decoration: line-through;
+}
+
+.map-node.is-learning {
+  background: var(--map-status-learning-bg);
+  color: var(--map-status-learning-color);
+  text-decoration: underline;
+}
+
+.map-node.is-skip {
+  background: var(--map-status-skip-bg);
+  color: var(--map-status-skip-color);
+  text-decoration: line-through;
+}
+
+.map-section {
+  width: 100%;
+  height: 100%;
+  background: var(--map-section-bg);
+  border: var(--map-section-border-width) solid var(--map-section-border);
+  border-radius: var(--map-section-radius);
+  pointer-events: none;
+}
+
+.react-flow__handle {
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+  min-width: 0;
+  min-height: 0;
+  border: none;
+  background: transparent;
+}
+
+.react-flow__controls {
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.react-flow__controls-button {
+  background: var(--panel);
+  border-bottom-color: var(--border);
+  fill: var(--text);
 }
 
 .drawer {

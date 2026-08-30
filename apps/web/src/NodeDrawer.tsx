@@ -3,9 +3,11 @@ import { useEffect, useState } from "react";
 import Markdown from "react-markdown";
 
 import {
+  PROGRESS_CLEAR_STATUS,
   PROGRESS_STATUSES,
   type Progress,
   type ProgressStatus,
+  type ProgressWriteStatus,
 } from "@linklike/protocol";
 
 import { ApiError, fetchNode, updateProgress } from "./api";
@@ -34,7 +36,7 @@ export function NodeDrawer({
   const [markdown, setMarkdown] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState<ProgressStatus | null>(null);
+  const [saving, setSaving] = useState<ProgressWriteStatus | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -65,10 +67,11 @@ export function NodeDrawer({
   }, [path, nodeId]);
 
   const setStatus = async (next: ProgressStatus) => {
-    setSaving(next);
+    const write: ProgressWriteStatus = status === next ? PROGRESS_CLEAR_STATUS : next;
+    setSaving(write);
     setError(null);
     try {
-      const progress = await updateProgress(path, nodeId, next);
+      const progress = await updateProgress(path, nodeId, write);
       await onStatusChange(progress);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : String(err));
@@ -97,10 +100,15 @@ export function NodeDrawer({
             key={option}
             type="button"
             className={`status-btn${status === option ? " active" : ""}`}
+            aria-pressed={status === option}
+            title={status === option ? "Click again to reset" : undefined}
             disabled={saving !== null}
             onClick={() => void setStatus(option)}
           >
-            {saving === option ? "Saving…" : STATUS_LABEL[option]}
+            {saving === option ||
+            (saving === PROGRESS_CLEAR_STATUS && status === option)
+              ? "Saving…"
+              : STATUS_LABEL[option]}
           </button>
         ))}
       </div>
