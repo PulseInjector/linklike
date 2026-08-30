@@ -10,3 +10,9 @@ dist
 .scratch
 .context
 .claude
+tmp
+
+# Playwright (apps/e2e)
+apps/e2e/test-results/
+apps/e2e/playwright-report/
+apps/e2e/blob-report/

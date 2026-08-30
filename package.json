@@ -13,6 +13,7 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,json,md,yml,yaml}\"",
     "validate": "node packages/cli/bin/linklike.mjs validate fixtures/minimal-project",
     "test": "pnpm -r --if-present test",
+    "test:e2e": "pnpm --filter @linklike/e2e test",
     "check": "pnpm lint && pnpm check-types && pnpm format:check && pnpm validate && pnpm test",
     "prepare": "husky"
   },

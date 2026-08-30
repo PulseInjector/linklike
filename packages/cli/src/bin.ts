@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { addNode, validateProjectDir } from "@linklike/core";
+import { addNode, setProgress, validateProjectDir } from "@linklike/core";
 import { PROGRESS_STATUSES } from "@linklike/protocol";
 
 function usage(): void {
@@ -62,29 +62,6 @@ async function initProject(targetDir: string): Promise<void> {
   );
 
   console.log(`Created project at ${targetDir}`);
-}
-
-async function setProgress(
-  targetDir: string,
-  nodeId: string,
-  status: string,
-): Promise<void> {
-  if (!PROGRESS_STATUSES.includes(status as (typeof PROGRESS_STATUSES)[number])) {
-    throw new Error(`status must be one of: ${PROGRESS_STATUSES.join(", ")}`);
-  }
-
-  const progressPath = path.join(targetDir, "progress.json");
-  const raw = await import("node:fs/promises").then((fs) =>
-    fs.readFile(progressPath, "utf8"),
-  );
-  const progress = JSON.parse(raw) as {
-    version: 1;
-    entries: Record<string, { status: string }>;
-  };
-
-  progress.entries[nodeId] = { status };
-  await writeFile(progressPath, `${JSON.stringify(progress, null, 2)}\n`);
-  console.log(`Set ${nodeId} → ${status}`);
 }
 
 async function main(): Promise<void> {
@@ -156,6 +133,7 @@ async function main(): Promise<void> {
       );
     }
     await setProgress(path.resolve(target), nodeId, status);
+    console.log(`Set ${nodeId} → ${status}`);
     return;
   }
 

@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 
 import Markdown from "react-markdown";
 
-import { PROGRESS_STATUSES, type ProgressStatus } from "@linklike/protocol";
+import {
+  PROGRESS_STATUSES,
+  type Progress,
+  type ProgressStatus,
+} from "@linklike/protocol";
 
 import { ApiError, fetchNode, updateProgress } from "./api";
 
@@ -24,7 +28,7 @@ export function NodeDrawer({
   nodeId: string;
   title: string;
   status: ProgressStatus | null;
-  onStatusChange: (status: ProgressStatus) => Promise<void> | void;
+  onStatusChange: (progress: Progress) => Promise<void> | void;
   onClose: () => void;
 }) {
   const [markdown, setMarkdown] = useState<string | null>(null);
@@ -64,8 +68,8 @@ export function NodeDrawer({
     setSaving(next);
     setError(null);
     try {
-      await updateProgress(path, nodeId, next);
-      await onStatusChange(next);
+      const progress = await updateProgress(path, nodeId, next);
+      await onStatusChange(progress);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : String(err));
     } finally {

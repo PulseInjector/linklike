@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -34,10 +34,52 @@ export type LoadResult =
   { ok: true; data: ProjectData } | { ok: false; issues: ValidationIssue[] };
 
 const SAFE_NODE_ID = /^[A-Za-z0-9._-]+$/;
+const LOCK_FILE = ".linklike.lock";
+const LOCK_STALE_MS = 30_000;
+const LOCK_WAIT_MS = 10_000;
 
 async function readJson(filePath: string): Promise<unknown> {
   const raw = await readFile(filePath, "utf8");
   return JSON.parse(raw) as unknown;
+}
+
+async function acquireProjectLock(projectDir: string) {
+  const lockPath = path.join(path.resolve(projectDir), LOCK_FILE);
+  const deadline = Date.now() + LOCK_WAIT_MS;
+
+  while (Date.now() < deadline) {
+    try {
+      const handle = await open(lockPath, "wx");
+      await handle.writeFile(String(process.pid));
+      return handle;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== "EEXIST") {
+        throw error;
+      }
+      try {
+        const info = await stat(lockPath);
+        if (Date.now() - info.mtimeMs > LOCK_STALE_MS) {
+          await unlink(lockPath).catch(() => undefined);
+          continue;
+        }
+      } catch {
+        continue;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+  }
+
+  throw new Error(`timed out acquiring project lock for ${projectDir}`);
+}
+
+async function releaseProjectLock(
+  projectDir: string,
+  handle: Awaited<ReturnType<typeof open>>,
+): Promise<void> {
+  const lockPath = path.join(path.resolve(projectDir), LOCK_FILE);
+  await handle.close();
+  await unlink(lockPath).catch(() => undefined);
 }
 
 const projectLocks = new Map<string, Promise<unknown>>();
@@ -48,7 +90,14 @@ function withProjectLock<T>(
 ): Promise<T> {
   const key = path.resolve(projectDir);
   const previous = projectLocks.get(key) ?? Promise.resolve();
-  const run = previous.then(operation, operation);
+  const run = previous.then(async () => {
+    const handle = await acquireProjectLock(projectDir);
+    try {
+      return await operation();
+    } finally {
+      await releaseProjectLock(projectDir, handle);
+    }
+  });
   projectLocks.set(
     key,
     run.then(

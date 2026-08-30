@@ -29,6 +29,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [issues, setIssues] = useState<string[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [contentEpoch, setContentEpoch] = useState(0);
 
   const load = useCallback(async (target: string) => {
     setLoading(true);
@@ -63,7 +64,11 @@ export function App() {
       return;
     }
     writePathToUrl(trimmed);
-    setPath(trimmed);
+    if (trimmed === path) {
+      void load(trimmed);
+    } else {
+      setPath(trimmed);
+    }
   };
 
   const onOpenAnother = () => {
@@ -87,7 +92,11 @@ export function App() {
         onCloseNode={() => setSelectedId(null)}
         onProgressUpdated={onProgressUpdated}
         onOpenAnother={onOpenAnother}
-        onReload={() => void load(path)}
+        onReload={() => {
+          setContentEpoch((epoch) => epoch + 1);
+          void load(path);
+        }}
+        contentEpoch={contentEpoch}
       />
     );
   }
@@ -138,6 +147,7 @@ function ProjectView({
   onProgressUpdated,
   onOpenAnother,
   onReload,
+  contentEpoch,
 }: {
   data: ProjectData;
   path: string;
@@ -147,6 +157,7 @@ function ProjectView({
   onProgressUpdated: (progress: Progress) => void;
   onOpenAnother: () => void;
   onReload: () => void;
+  contentEpoch: number;
 }) {
   const selectedNode = selectedId
     ? (data.graph.nodes.find((node) => node.id === selectedId) ?? null)
@@ -182,20 +193,12 @@ function ProjectView({
         </div>
         {selectedNode && (
           <NodeDrawer
-            key={selectedNode.id}
+            key={`${selectedNode.id}:${contentEpoch}`}
             path={path}
             nodeId={selectedNode.id}
             title={selectedNode.title}
             status={selectedStatus}
-            onStatusChange={(next) => {
-              onProgressUpdated({
-                ...data.progress,
-                entries: {
-                  ...data.progress.entries,
-                  [selectedNode.id]: { status: next },
-                },
-              });
-            }}
+            onStatusChange={onProgressUpdated}
             onClose={onCloseNode}
           />
         )}
