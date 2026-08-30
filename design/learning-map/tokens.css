@@ -1,0 +1,36 @@
+:root {
+  --bg: #ffffff;
+  --panel: #ffffff;
+  --border: #d6d6d6;
+  --text: #000000;
+  --muted: #6b7280;
+  --accent: #2b78e4;
+  --danger: #dc2626;
+  --map-dot: #e5e5e5;
+  --map-font-family: "Balsamiq Sans", "Comic Neue", "Comic Sans MS", system-ui, sans-serif;
+  --map-font-size: 17px;
+  --map-topic-bg: #fdff00;
+  --map-topic-color: #000000;
+  --map-topic-hover: #d6d700;
+  --map-subtopic-bg: #ffe599;
+  --map-subtopic-color: #000000;
+  --map-subtopic-hover: #f3c950;
+  --map-node-border: #000000;
+  --map-node-border-width: 2.7px;
+  --map-node-radius: 5px;
+  --map-node-padding: 12px 20px;
+  --map-section-bg: #ffffff;
+  --map-section-border: #000000;
+  --map-section-border-width: 2.7px;
+  --map-section-radius: 5px;
+  --map-selected-ring: #c3c3ff;
+  --map-edge-stroke: #2b78e4;
+  --map-edge-width: 3.5px;
+  --map-edge-dashed: 0.8 8;
+  --map-status-done-bg: #cbcbcb;
+  --map-status-done-color: #000000;
+  --map-status-learning-bg: #dad1fd;
+  --map-status-learning-color: #000000;
+  --map-status-skip-bg: #496b69;
+  --map-status-skip-color: #ffffff;
+}
