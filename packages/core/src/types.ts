@@ -26,3 +26,9 @@ export interface AddNodeResult {
   graph: PlanGraph;
   nodeFileCreated: boolean;
 }
+
+export interface DeleteNodeResult {
+  deletedIds: string[];
+  graph: PlanGraph;
+  progress: Progress;
+}

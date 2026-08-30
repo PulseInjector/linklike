@@ -131,6 +131,199 @@ describe("api", () => {
     const body = (await res.json()) as { tag: string };
     expect(body.tag).toBe("InvalidStatus");
   });
+
+  it("adds a node via POST", async () => {
+    const dir = await makeTempProject();
+    tempDirs.push(dir);
+
+    const res = await app.request("/project/nodes", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ path: dir, title: "Pod basics", parent: "root" }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { id: string; graph: { edges: unknown[] } };
+    expect(body.id).toBe("pod-basics");
+    const graph = JSON.parse(
+      await readFile(path.join(dir, "plan.graph.json"), "utf8"),
+    ) as { nodes: { id: string }[]; edges: unknown[] };
+    expect(graph.nodes.map((node) => node.id)).toContain("pod-basics");
+    expect(graph.edges).toContainEqual({ from: "root", to: "pod-basics" });
+    const stub = await readFile(path.join(dir, "nodes", "pod-basics.mdx"), "utf8");
+    expect(stub).toContain("# Pod basics");
+  });
+
+  it("rejects an empty title on POST", async () => {
+    const dir = await makeTempProject();
+    tempDirs.push(dir);
+
+    const res = await app.request("/project/nodes", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ path: dir, title: " " }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { tag: string };
+    expect(body.tag).toBe("EmptyTitle");
+  });
+
+  it("rejects an unknown parent on POST", async () => {
+    const dir = await makeTempProject();
+    tempDirs.push(dir);
+
+    const res = await app.request("/project/nodes", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ path: dir, title: "X", parent: "nope" }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { tag: string };
+    expect(body.tag).toBe("UnknownParent");
+  });
+
+  it("writes node markdown via PUT", async () => {
+    const dir = await makeTempProject();
+    tempDirs.push(dir);
+    const graphBefore = await readFile(path.join(dir, "plan.graph.json"), "utf8");
+    const progressBefore = await readFile(path.join(dir, "progress.json"), "utf8");
+
+    const res = await app.request("/project/nodes/root", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ path: dir, markdown: "# Root\n\nEdited.\n" }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(await readFile(path.join(dir, "nodes", "root.mdx"), "utf8")).toBe(
+      "# Root\n\nEdited.\n",
+    );
+    expect(await readFile(path.join(dir, "plan.graph.json"), "utf8")).toBe(graphBefore);
+    expect(await readFile(path.join(dir, "progress.json"), "utf8")).toBe(
+      progressBefore,
+    );
+  });
+
+  it("allows an empty markdown body on PUT", async () => {
+    const dir = await makeTempProject();
+    tempDirs.push(dir);
+
+    const res = await app.request("/project/nodes/root", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ path: dir, markdown: "" }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(await readFile(path.join(dir, "nodes", "root.mdx"), "utf8")).toBe("");
+  });
+
+  it("rejects an illegal node id on PUT", async () => {
+    const dir = await makeTempProject();
+    tempDirs.push(dir);
+
+    const res = await app.request(
+      `/project/nodes/${encodeURIComponent("../../secret")}`,
+      {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ path: dir, markdown: "x" }),
+      },
+    );
+
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { tag: string };
+    expect(body.tag).toBe("InvalidNodeId");
+  });
+
+  it("cascade-deletes via DELETE and refuses the last node", async () => {
+    const dir = await makeTempProject();
+    tempDirs.push(dir);
+
+    await app.request("/project/nodes", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ path: dir, title: "Child", parent: "root" }),
+    });
+
+    const dataHome = await mkdtemp(path.join(tmpdir(), "linklike-api-trash-"));
+    tempDirs.push(dataHome);
+    const previous = process.env.XDG_DATA_HOME;
+    process.env.XDG_DATA_HOME = dataHome;
+    try {
+      const res = await app.request(
+        `/project/nodes/child?path=${encodeURIComponent(dir)}`,
+        { method: "DELETE" },
+      );
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { deletedIds: string[] };
+      expect(body.deletedIds).toEqual(["child"]);
+      await expect(
+        readFile(path.join(dir, "nodes", "child.mdx"), "utf8"),
+      ).rejects.toMatchObject({ code: "ENOENT" });
+      expect(
+        await readFile(path.join(dataHome, "Trash", "files", "child.mdx"), "utf8"),
+      ).toContain("# Child");
+    } finally {
+      if (previous === undefined) {
+        delete process.env.XDG_DATA_HOME;
+      } else {
+        process.env.XDG_DATA_HOME = previous;
+      }
+    }
+
+    const last = await app.request(
+      `/project/nodes/root?path=${encodeURIComponent(dir)}`,
+      { method: "DELETE" },
+    );
+    expect(last.status).toBe(400);
+    const lastBody = (await last.json()) as { tag: string };
+    expect(lastBody.tag).toBe("LastNode");
+    expect(await readFile(path.join(dir, "nodes", "root.mdx"), "utf8")).toContain(
+      "# Root",
+    );
+  });
+
+  it("stays valid when DELETE is interleaved with PATCH progress", async () => {
+    const dir = await makeTempProject();
+    tempDirs.push(dir);
+
+    await app.request("/project/nodes", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ path: dir, title: "Child", parent: "root" }),
+    });
+
+    const dataHome = await mkdtemp(path.join(tmpdir(), "linklike-api-trash-"));
+    tempDirs.push(dataHome);
+    const previous = process.env.XDG_DATA_HOME;
+    process.env.XDG_DATA_HOME = dataHome;
+    try {
+      const [del, patch] = await Promise.all([
+        app.request(`/project/nodes/child?path=${encodeURIComponent(dir)}`, {
+          method: "DELETE",
+        }),
+        app.request("/project/progress", {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ path: dir, nodeId: "root", status: "done" }),
+        }),
+      ]);
+      expect(del.status).toBe(200);
+      expect(patch.status).toBe(200);
+    } finally {
+      if (previous === undefined) {
+        delete process.env.XDG_DATA_HOME;
+      } else {
+        process.env.XDG_DATA_HOME = previous;
+      }
+    }
+
+    const project = await app.request(`/project?path=${encodeURIComponent(dir)}`);
+    expect(project.status).toBe(200);
+  });
 });
 
 const tempDirs: string[] = [];
