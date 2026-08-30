@@ -11,10 +11,11 @@
     "check-types": "pnpm -r --if-present check-types",
     "format": "prettier --write \"**/*.{ts,tsx,js,mjs,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,json,md,yml,yaml}\"",
+    "lint:comments": "node scripts/lint-comments.mjs",
     "validate": "node packages/cli/bin/linklike.mjs validate fixtures/minimal-project",
     "test": "pnpm -r --if-present test",
     "test:e2e": "pnpm --filter @linklike/e2e test",
-    "check": "pnpm lint && pnpm check-types && pnpm format:check && pnpm validate && pnpm test",
+    "check": "pnpm lint && pnpm check-types && pnpm lint:comments && pnpm format:check && pnpm validate && pnpm test",
     "prepare": "husky"
   },
   "devDependencies": {

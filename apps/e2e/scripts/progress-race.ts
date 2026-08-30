@@ -1,10 +1,3 @@
-/**
- * Audit blocker B3/B4 (adversarial A & B): concurrent progress writers
- * without cross-process locking can drop one update on disk.
- *
- * Uses two CLI processes (same read-modify-write path as CLI vs API).
- * Run: pnpm --filter @linklike/e2e test:race
- */
 import { execFile } from "node:child_process";
 import { cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

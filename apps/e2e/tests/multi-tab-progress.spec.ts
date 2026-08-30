@@ -1,7 +1,3 @@
-/**
- * Audit blocker B3 (adversarial B): two tabs on the same project must not
- * revert another tab's progress in local UI when saving from this tab.
- */
 import { expect, test } from "@playwright/test";
 
 import { copyTwoNodeProject } from "../helpers/project.js";

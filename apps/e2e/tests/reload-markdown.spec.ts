@@ -1,7 +1,3 @@
-/**
- * Audit blocker B1/B2 (adversarial A & B): Reload should refresh markdown
- * for an already-open node after the file changes on disk.
- */
 import { expect, test } from "@playwright/test";
 
 import { copyMinimalProject, writeNodeMarkdown } from "../helpers/project.js";

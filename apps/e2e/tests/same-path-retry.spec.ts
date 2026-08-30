@@ -1,7 +1,3 @@
-/**
- * Audit blocker B1/B2 (adversarial A & B): submitting the same path again
- * after a failed open must retry loading once the project is fixed on disk.
- */
 import { expect, test } from "@playwright/test";
 
 import {

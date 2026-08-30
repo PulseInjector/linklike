@@ -41,6 +41,6 @@ node packages/cli/bin/linklike.mjs validate ~/learning/my-topic
 
 1. **Find or create an issue** — Pick an existing one or raise a new one with the templates above.
 2. **Branch** — `git checkout -b issue/123-short-description`
-3. **Code and test** — Run `pnpm check` before you push.
+3. **Code and test** — Run `pnpm check` before you push. Comment style: [AGENTS.md § Comments](AGENTS.md#comments).
 4. **Submit a PR** — Link the issue; use the pull request template.
 5. **Review & iterate** — Address CI and review feedback until merge.

@@ -7,6 +7,8 @@
 | `packages/protocol/`        | Zod schemas for project, graph, and progress         |
 | `packages/core/`            | Read/write and validate learning project directories |
 | `packages/cli/`             | `linklike` CLI                                       |
+| `apps/api/`                 | Local HTTP API (Hono) for the browser UI             |
+| `apps/e2e/`                 | Playwright e2e and race reproduction scripts         |
 | `apps/web/`                 | Browser UI (Vite + React)                            |
 | `fixtures/minimal-project/` | Golden project; must pass `pnpm validate`            |
 | `.github/`                  | CI, issue templates, pull request template           |
@@ -61,8 +63,17 @@ linklike node add . --title "Pod basics" --parent root
 
 ## Code style
 
-- Do not add narrative comments to source code.
 - Match existing formatting; `pnpm format:check` must pass.
+- Run `pnpm lint:comments` before push; it is part of `pnpm check`.
+
+## Comments
+
+- **Why, not what:** Names, types, and tests show what happens. Comments explain non-obvious invariants, failure modes, layering boundaries, concurrency, or version/security pins that the code cannot express.
+- **Keep it short:** Prefer one `//` line beside the constraint. TypeScript rarely needs file-level blocks; use them only when a module defines a public contract callers must understand.
+- **Do not comment:** audit/PR narratives, bug history, or lines that restate the code. Put that in commits, PR descriptions, or test names (`test("…")`).
+- **Do not remove** meaningful rationale just to minimize line count.
+- **Tool directives** (`// @ts-expect-error`, `// eslint-disable-next-line`, `// prettier-ignore`) are allowed with a short reason after the directive.
+- **Enforcement:** `pnpm lint:comments` forbids `/* */` block comments under `apps/` and `packages/`. `//` why-comments are allowed when they add real context; review catches narration that restates the code.
 
 ## Effect (`@linklike/core`)
 
