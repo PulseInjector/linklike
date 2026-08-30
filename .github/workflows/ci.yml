@@ -27,4 +27,5 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @linklike/e2e exec playwright install chromium --with-deps
       - run: pnpm check
