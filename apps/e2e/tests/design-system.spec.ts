@@ -46,8 +46,16 @@ test("topic and subtopic clips match token styling", async ({ page }) => {
   const projectDir = await copyMinimalProject();
   await openProject(page, projectDir);
 
-  await expect(mapNode(page, "Kubernetes overview")).toHaveScreenshot("topic.png");
-  await expect(mapNode(page, "Cluster DNS")).toHaveScreenshot("subtopic.png");
+  const topic = mapNode(page, "Kubernetes overview");
+  const subtopic = mapNode(page, "Cluster DNS");
+  await expect(topic).toHaveCSS("background-color", tokens.topic.backgroundRgb);
+  await expect(topic).toHaveCSS("color", tokens.topic.colorRgb);
+  await expect(topic).toHaveCSS("border-top-color", tokens.topic.borderRgb);
+  await expect(topic).toHaveCSS("font-size", tokens.font.size);
+  await expect(subtopic).toHaveCSS("background-color", tokens.subtopic.backgroundRgb);
+  await expect(subtopic).toHaveCSS("color", tokens.subtopic.colorRgb);
+  await expect(subtopic).toHaveCSS("border-top-color", tokens.subtopic.borderRgb);
+  await expect(subtopic).toHaveCSS("font-size", tokens.font.size);
 });
 
 test("reference design screenshots are in the repo", async () => {
