@@ -1,7 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { LinklikeError } from "@linklike/core";
 import {
   addNode,
   isLinklikeError,
@@ -72,12 +71,6 @@ async function initProject(targetDir: string): Promise<void> {
   console.log(`Created project at ${targetDir}`);
 }
 
-async function runCoreCommand<A>(
-  effect: import("effect").Effect.Effect<A, LinklikeError>,
-): Promise<A> {
-  return runCore(effect);
-}
-
 async function main(): Promise<void> {
   const [, , command, ...rest] = process.argv;
 
@@ -101,7 +94,7 @@ async function main(): Promise<void> {
     if (!target) {
       throw new Error("validate requires a directory path");
     }
-    const result = await runCoreCommand(validateProjectDir(path.resolve(target)));
+    const result = await runCore(validateProjectDir(path.resolve(target)));
     if (json) {
       console.log(JSON.stringify(result, null, 2));
     } else if (result.ok) {
@@ -126,9 +119,7 @@ async function main(): Promise<void> {
         "usage: linklike node add <directory> --title <title> [--parent <nodeId>]",
       );
     }
-    const result = await runCoreCommand(
-      addNode(path.resolve(target), { title, parent }),
-    );
+    const result = await runCore(addNode(path.resolve(target), { title, parent }));
     console.log(`Added node ${result.id}`);
     if (parent) {
       console.log(`Linked ${parent} → ${result.id}`);
@@ -148,7 +139,7 @@ async function main(): Promise<void> {
         "usage: linklike progress set <directory> <nodeId> --status learning|done|skip",
       );
     }
-    await runCoreCommand(setProgress(path.resolve(target), nodeId, status));
+    await runCore(setProgress(path.resolve(target), nodeId, status));
     console.log(`Set ${nodeId} → ${status}`);
     return;
   }

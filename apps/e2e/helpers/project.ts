@@ -14,27 +14,57 @@ export async function copyMinimalProject(): Promise<string> {
 }
 
 export async function copyTwoNodeProject(): Promise<string> {
-  const dir = await copyMinimalProject();
-
-  const graphPath = path.join(dir, "plan.graph.json");
-  const graph = JSON.parse(await readFile(graphPath, "utf8")) as {
-    version: number;
-    nodes: Array<{ id: string; title: string }>;
-    edges: Array<{ from: string; to: string }>;
-  };
-  graph.nodes.push({ id: "second", title: "Second topic" });
-  graph.edges.push({ from: "root", to: "second" });
-  await writeFile(graphPath, `${JSON.stringify(graph, null, 2)}\n`);
-
-  const progressPath = path.join(dir, "progress.json");
-  const progress = JSON.parse(await readFile(progressPath, "utf8")) as {
-    version: number;
-    entries: Record<string, { status: string }>;
-  };
-  progress.entries.second = { status: "learning" };
-  await writeFile(progressPath, `${JSON.stringify(progress, null, 2)}\n`);
-
+  const dir = await mkdtemp(path.join(tmpdir(), "linklike-e2e-"));
   await mkdir(path.join(dir, "nodes"), { recursive: true });
+
+  await writeFile(
+    path.join(dir, "project.json"),
+    `${JSON.stringify(
+      {
+        version: 1,
+        name: "two-node",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      },
+      null,
+      2,
+    )}\n`,
+  );
+
+  await writeFile(
+    path.join(dir, "plan.graph.json"),
+    `${JSON.stringify(
+      {
+        version: 1,
+        nodes: [
+          { id: "root", title: "Minimal example" },
+          { id: "second", title: "Second topic" },
+        ],
+        edges: [{ from: "root", to: "second" }],
+      },
+      null,
+      2,
+    )}\n`,
+  );
+
+  await writeFile(
+    path.join(dir, "progress.json"),
+    `${JSON.stringify(
+      {
+        version: 1,
+        entries: {
+          root: { status: "learning" },
+          second: { status: "learning" },
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+
+  await writeFile(
+    path.join(dir, "nodes", "root.mdx"),
+    "# Minimal example\n\nFixture project for e2e.\n",
+  );
   await writeFile(
     path.join(dir, "nodes", "second.mdx"),
     "# Second topic\n\nFollow-up material.\n",
