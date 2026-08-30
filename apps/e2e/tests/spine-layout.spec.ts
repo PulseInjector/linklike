@@ -6,7 +6,7 @@ import {
   copySpineProject,
   readGraphFile,
 } from "../helpers/project.js";
-import { mapNode, openProject } from "../helpers/ui.js";
+import { mapNode, openNodeDrawer, openProject } from "../helpers/ui.js";
 
 test("spine layout fans subtopics and keeps plan.graph.json free of position", async ({
   page,
@@ -61,7 +61,7 @@ test("spine layout fans subtopics and keeps plan.graph.json free of position", a
     after.nodes.some((node) => node.title === "Choosing the Right Technologies"),
   ).toBe(true);
 
-  await mapNode(page, "Introduction").click();
+  await openNodeDrawer(page, "Introduction");
   await expect(page.locator(".drawer h2")).toHaveText("Introduction");
 });
 

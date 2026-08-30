@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import {
   Background,
@@ -63,14 +63,66 @@ export function Map({
   progress,
   selectedId,
   onSelect,
+  onOpenNotes,
+  onAdd,
+  onDelete,
 }: {
   graph: PlanGraph;
   progress: Progress;
   selectedId: string | null;
-  onSelect: (nodeId: string) => void;
+  onSelect: (nodeId: string | null) => void;
+  onOpenNotes: (nodeId: string) => void;
+  onAdd: (parentId: string, title: string) => Promise<void>;
+  onDelete: (nodeId: string) => Promise<void>;
 }) {
   const laidOut = useMemo(() => layoutLearningMap(graph), [graph]);
   const graphId = useMemo(() => graph.nodes.map((node) => node.id).join("\0"), [graph]);
+  const [addingForId, setAddingForId] = useState<string | null>(null);
+  const [draftTitle, setDraftTitle] = useState("");
+  const canDelete = graph.nodes.length > 1;
+  const pendingClick = useRef<{
+    id: string;
+    timer: ReturnType<typeof setTimeout>;
+  } | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (pendingClick.current) {
+        clearTimeout(pendingClick.current.timer);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (addingForId && addingForId !== selectedId) {
+      setAddingForId(null);
+      setDraftTitle("");
+    }
+  }, [selectedId, addingForId]);
+
+  const cancelAdd = () => {
+    setAddingForId(null);
+    setDraftTitle("");
+  };
+
+  const commitAdd = async () => {
+    const title = draftTitle.trim();
+    const parentId = addingForId;
+    if (!parentId || !title) {
+      cancelAdd();
+      return;
+    }
+    await onAdd(parentId, title);
+    cancelAdd();
+  };
+
+  const requestDelete = async (nodeId: string) => {
+    const hasChildren = graph.edges.some((edge) => edge.from === nodeId);
+    if (hasChildren && !window.confirm("Delete this node and its children?")) {
+      return;
+    }
+    await onDelete(nodeId);
+  };
 
   const nodes = useMemo<Node[]>(() => {
     const frames: Node[] = laidOut.sections.map((section) => ({
@@ -100,6 +152,22 @@ export function Map({
         label: node.title,
         kind: node.kind,
         status: statusOf(progress, node.id),
+        canDelete,
+        adding: addingForId === node.id,
+        draftTitle: addingForId === node.id ? draftTitle : "",
+        onAdd: () => {
+          setAddingForId(node.id);
+          setDraftTitle("");
+        },
+        onDelete: () => {
+          void requestDelete(node.id);
+        },
+        onDraftChange: setDraftTitle,
+        onCommitAdd: () => {
+          void commitAdd();
+        },
+        onCancelAdd: cancelAdd,
+        onOpenNotes: () => onOpenNotes(node.id),
       },
       selected: node.id === selectedId,
       width: node.width,
@@ -108,7 +176,18 @@ export function Map({
     }));
 
     return [...frames, ...cards];
-  }, [laidOut, progress, selectedId]);
+  }, [
+    laidOut,
+    progress,
+    selectedId,
+    canDelete,
+    addingForId,
+    draftTitle,
+    onAdd,
+    onDelete,
+    onOpenNotes,
+    graph.edges,
+  ]);
 
   const edges = useMemo<Edge[]>(() => {
     const byId = Object.fromEntries(laidOut.nodes.map((node) => [node.id, node]));
@@ -141,11 +220,58 @@ export function Map({
     });
   }, [graph, laidOut]);
 
-  const onNodeClick: NodeMouseHandler = (_event, node) => {
+  const onNodeClick: NodeMouseHandler = (event, node) => {
     if (node.type === "section") {
       return;
     }
+    const target = event.target as HTMLElement | null;
+    if (target?.closest(".map-node-toolbar")) {
+      if (pendingClick.current) {
+        clearTimeout(pendingClick.current.timer);
+        pendingClick.current = null;
+      }
+      return;
+    }
+
     onSelect(node.id);
+    if (event.detail >= 2) {
+      if (pendingClick.current) {
+        clearTimeout(pendingClick.current.timer);
+        pendingClick.current = null;
+      }
+      onOpenNotes(node.id);
+      return;
+    }
+    if (pendingClick.current?.id === node.id) {
+      clearTimeout(pendingClick.current.timer);
+      pendingClick.current = null;
+      onOpenNotes(node.id);
+      return;
+    }
+    if (pendingClick.current) {
+      clearTimeout(pendingClick.current.timer);
+    }
+    pendingClick.current = {
+      id: node.id,
+      timer: setTimeout(() => {
+        pendingClick.current = null;
+      }, 280),
+    };
+  };
+
+  const onNodeDoubleClick: NodeMouseHandler = (event, node) => {
+    if (node.type === "section") {
+      return;
+    }
+    const target = event.target as HTMLElement | null;
+    if (target?.closest(".map-node-toolbar")) {
+      return;
+    }
+    if (pendingClick.current) {
+      clearTimeout(pendingClick.current.timer);
+      pendingClick.current = null;
+    }
+    onOpenNotes(node.id);
   };
 
   return (
@@ -154,6 +280,7 @@ export function Map({
       edges={edges}
       nodeTypes={nodeTypes}
       onNodeClick={onNodeClick}
+      onNodeDoubleClick={onNodeDoubleClick}
       nodesDraggable={false}
       nodesConnectable={false}
       edgesFocusable={false}

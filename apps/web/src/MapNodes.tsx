@@ -4,6 +4,15 @@ export type MapNodeData = {
   label: string;
   kind: "topic" | "subtopic";
   status: "none" | "learning" | "done" | "skip";
+  canDelete: boolean;
+  adding: boolean;
+  draftTitle: string;
+  onAdd: () => void;
+  onDelete: () => void;
+  onDraftChange: (value: string) => void;
+  onCommitAdd: () => void;
+  onCancelAdd: () => void;
+  onOpenNotes: () => void;
 };
 
 export type CardFlowNode = Node<MapNodeData, "topic" | "subtopic">;
@@ -28,10 +37,61 @@ function Handles() {
   );
 }
 
+function stopCardEvent(event: { stopPropagation: () => void }) {
+  event.stopPropagation();
+}
+
 export function CardNode({ data, selected }: NodeProps<CardFlowNode>) {
   return (
     <div className="map-node-wrap">
-      <div className={cardClass(data, selected)}>{data.label}</div>
+      <div
+        className={`map-node-toolbar${selected ? "" : " is-hidden"}`}
+        role="toolbar"
+        aria-label="Node actions"
+        aria-hidden={!selected}
+        onMouseDown={stopCardEvent}
+        onClick={stopCardEvent}
+        onDoubleClick={stopCardEvent}
+      >
+        {data.adding ? (
+          <input
+            className="map-node-title-input"
+            aria-label="New node title"
+            value={data.draftTitle}
+            autoFocus
+            onChange={(event) => data.onDraftChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                data.onCommitAdd();
+              } else if (event.key === "Escape") {
+                event.preventDefault();
+                data.onCancelAdd();
+              }
+            }}
+          />
+        ) : (
+          <>
+            <button type="button" onClick={data.onAdd}>
+              Add
+            </button>
+            {data.canDelete && (
+              <button type="button" onClick={data.onDelete}>
+                Delete
+              </button>
+            )}
+          </>
+        )}
+      </div>
+      <div
+        className={cardClass(data, selected)}
+        onDoubleClick={(event) => {
+          event.stopPropagation();
+          data.onOpenNotes();
+        }}
+      >
+        {data.label}
+      </div>
       <Handles />
     </div>
   );
