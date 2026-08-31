@@ -1,4 +1,12 @@
-import { mkdir, open, readFile, stat, unlink, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  open,
+  readFile,
+  rmdir,
+  stat,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -117,6 +125,21 @@ const writeText = (filePath: string, content: string): Effect.Effect<void, IoErr
   Effect.tryPromise({
     try: () => writeFile(filePath, content),
     catch: (cause) => new IoError({ operation: `write ${filePath}`, cause }),
+  });
+
+const writeNewText = (
+  filePath: string,
+  content: string,
+  projectDir: string,
+): Effect.Effect<void, IoError | ProjectExists> =>
+  Effect.tryPromise({
+    try: () => writeFile(filePath, content, { flag: "wx" }),
+    catch: (cause) => {
+      if ((cause as NodeJS.ErrnoException).code === "EEXIST") {
+        return new ProjectExists({ projectDir });
+      }
+      return new IoError({ operation: `write ${filePath}`, cause });
+    },
   });
 
 function projectPaths(projectDir: string) {
@@ -372,7 +395,12 @@ export const loadProjectDir = (
     return yield* readProjectData(projectDir);
   });
 
-const PROJECT_MARKERS = ["project.json", "plan.graph.json", "progress.json"] as const;
+const INIT_RELATIVE_PATHS = [
+  "project.json",
+  "plan.graph.json",
+  "progress.json",
+  path.join("nodes", "root.mdx"),
+] as const;
 
 export const initProjectDir = (
   projectDir: string,
@@ -395,8 +423,8 @@ export const initProjectDir = (
     return yield* withProjectLock(
       resolved,
       Effect.gen(function* () {
-        for (const marker of PROJECT_MARKERS) {
-          const existing = yield* statPath(path.join(resolved, marker));
+        for (const relative of INIT_RELATIVE_PATHS) {
+          const existing = yield* statPath(path.join(resolved, relative));
           if (existing !== null) {
             return yield* Effect.fail(new ProjectExists({ projectDir: resolved }));
           }
@@ -406,11 +434,16 @@ export const initProjectDir = (
         const now = new Date().toISOString();
         const { projectPath, graphPath, progressPath } = projectPaths(resolved);
         const nodesDir = path.join(resolved, "nodes");
+        const rootNotePath = path.join(nodesDir, "root.mdx");
+        const created: string[] = [];
+        let createdNodesDir = false;
 
+        const nodesBefore = yield* statPath(nodesDir);
         yield* Effect.tryPromise({
           try: () => mkdir(nodesDir, { recursive: true }),
           catch: (cause) => new IoError({ operation: `mkdir ${nodesDir}`, cause }),
         });
+        createdNodesDir = nodesBefore === null;
 
         const project = { version: 1 as const, name, createdAt: now };
         const graph = {
@@ -423,15 +456,48 @@ export const initProjectDir = (
           entries: { root: { status: "learning" as const } },
         };
 
-        yield* writeText(projectPath, `${JSON.stringify(project, null, 2)}\n`);
-        yield* writeText(graphPath, `${JSON.stringify(graph, null, 2)}\n`);
-        yield* writeText(progressPath, `${JSON.stringify(progress, null, 2)}\n`);
-        yield* writeText(
-          path.join(nodesDir, "root.mdx"),
-          `# ${name}\n\nStart your notes here.\n`,
-        );
+        const rollback = Effect.tryPromise({
+          try: async () => {
+            for (const filePath of [...created].reverse()) {
+              await unlink(filePath).catch(() => undefined);
+            }
+            if (createdNodesDir) {
+              await rmdir(nodesDir).catch(() => undefined);
+            }
+          },
+          catch: () => undefined,
+        }).pipe(Effect.ignore);
 
-        return { project, graph, progress };
+        return yield* Effect.gen(function* () {
+          yield* writeNewText(
+            projectPath,
+            `${JSON.stringify(project, null, 2)}\n`,
+            resolved,
+          );
+          created.push(projectPath);
+          yield* writeNewText(
+            graphPath,
+            `${JSON.stringify(graph, null, 2)}\n`,
+            resolved,
+          );
+          created.push(graphPath);
+          yield* writeNewText(
+            progressPath,
+            `${JSON.stringify(progress, null, 2)}\n`,
+            resolved,
+          );
+          created.push(progressPath);
+          yield* writeNewText(
+            rootNotePath,
+            `# ${name}\n\nStart your notes here.\n`,
+            resolved,
+          );
+          created.push(rootNotePath);
+          return { project, graph, progress };
+        }).pipe(
+          // Leftover markers would make retry fail with ProjectExists.
+          Effect.tapError(() => rollback),
+        );
       }),
     );
   });

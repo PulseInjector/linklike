@@ -72,6 +72,8 @@ describe("pickFolderNative", () => {
       expect(file).toBe("powershell.exe");
       expect(args).toContain("-STA");
       expect(args.some((arg) => arg.includes("FOS_PICKFOLDERS"))).toBe(true);
+      expect(args.some((arg) => arg.includes("$Result -eq 0"))).toBe(true);
+      expect(args.some((arg) => arg.includes("DialogResult"))).toBe(false);
       expect(args.some((arg) => arg.includes("FolderBrowserDialog"))).toBe(false);
       return { stdout: "C:\\Users\\me\\topic\r\n", stderr: "" };
     };
@@ -87,5 +89,14 @@ describe("pickFolderNative", () => {
       ok: false,
       reason: "cancelled",
     });
+  });
+
+  it("does not treat Windows exit 1 as cancelled", async () => {
+    const exec: ExecFolderPicker = async () => {
+      const error = new Error("reflection failed") as Error & { code: number };
+      error.code = 1;
+      throw error;
+    };
+    await expect(pickFolderNative("win32", exec)).rejects.toThrow("reflection failed");
   });
 });

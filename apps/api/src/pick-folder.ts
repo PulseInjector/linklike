@@ -13,7 +13,7 @@ export type ExecFolderPicker = (
 
 const PROMPT = "Choose a learning project folder";
 
-// Vista+ IFileDialog + FOS_PICKFOLDERS via OpenFileDialog, not FolderBrowserDialog.
+// Vista+ IFileDialog + FOS_PICKFOLDERS; Show returns HRESULT S_OK (0), not DialogResult.OK (1).
 const WINDOWS_PICK_FOLDER = `
 $AssemblyFullName = 'System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'
 $Assembly = [System.Reflection.Assembly]::Load($AssemblyFullName)
@@ -38,7 +38,7 @@ $null = $FileDialogInterfaceType.GetMethod('Advise',@('NonPublic','Public','Stat
 $AdviceCookie = $AdvisoryParameters[1]
 $Result = $FileDialogInterfaceType.GetMethod('Show',@('NonPublic','Public','Static','Instance')).Invoke($IFileDialog,[System.IntPtr]::Zero)
 $null = $FileDialogInterfaceType.GetMethod('Unadvise',@('NonPublic','Public','Static','Instance')).Invoke($IFileDialog,$AdviceCookie)
-if ($Result -eq [System.Windows.Forms.DialogResult]::OK) {
+if ($Result -eq 0) {
   Write-Output $OpenFileDialog.FileName
 }
 `.trim();
@@ -129,7 +129,9 @@ export async function pickFolderNative(
     if (code === "ENOENT") {
       return { ok: false, reason: "unavailable" };
     }
-    if (code === 1 || /cancel/i.test(execErrorText(error))) {
+    const cancelledByMessage = /cancel/i.test(execErrorText(error));
+    // Windows exit 1 is a script failure; darwin/zenity use 1 for user cancel.
+    if (cancelledByMessage || (platform !== "win32" && code === 1)) {
       return { ok: false, reason: "cancelled" };
     }
     throw error;

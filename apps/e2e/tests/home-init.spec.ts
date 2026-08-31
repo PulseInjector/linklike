@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -120,4 +120,41 @@ test("initialize is allowed in a non-empty folder without JSON files", async ({
   await page.getByRole("button", { name: "Initialize" }).click();
   await expectProjectView(page);
   expect(await readFile(path.join(dir, "readme.txt"), "utf8")).toBe("keep me\n");
+});
+
+test("initialize does not overwrite an existing root note", async ({ page }) => {
+  const dir = await mkdtemp(path.join(tmpdir(), "linklike-e2e-root-note-"));
+  await mkdir(path.join(dir, "nodes"), { recursive: true });
+  await writeFile(path.join(dir, "nodes", "root.mdx"), "KEEP THIS NOTE\n");
+
+  await page.goto("/");
+  await page.locator("#path-input").fill(dir);
+  await page.getByRole("button", { name: "Initialize" }).click();
+  await expect(page.getByRole("alert")).toBeVisible();
+  expect(await readFile(path.join(dir, "nodes", "root.mdx"), "utf8")).toBe(
+    "KEEP THIS NOTE\n",
+  );
+  await expect(readFile(path.join(dir, "project.json"), "utf8")).rejects.toMatchObject({
+    code: "ENOENT",
+  });
+});
+
+test("browse success clears a previous open error", async ({ page }) => {
+  await page.route("**/api/project/pick-directory", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      json: { path: "/tmp/picked-after-error" },
+    });
+  });
+
+  const missing = path.join(tmpdir(), `linklike-e2e-browse-clear-${Date.now()}`);
+  await page.goto("/");
+  await page.locator("#path-input").fill(missing);
+  await page.getByRole("button", { name: "Open project" }).click();
+  await expect(page.getByRole("alert")).toBeVisible();
+
+  await page.getByRole("button", { name: "Browse" }).click();
+  await expect(page.locator("#path-input")).toHaveValue("/tmp/picked-after-error");
+  await expect(page.getByRole("alert")).toHaveCount(0);
 });

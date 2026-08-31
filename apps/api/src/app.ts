@@ -107,7 +107,8 @@ export function createApp(
     }
 
     const { path: dir } = (body ?? {}) as Record<string, unknown>;
-    if (typeof dir !== "string") {
+    // path.resolve("") is the API process cwd.
+    if (typeof dir !== "string" || dir.trim().length === 0) {
       return c.json({ error: "path is a required string" }, 400);
     }
 

@@ -393,6 +393,41 @@ describe("POST /project/init", () => {
       "{ not valid json\n",
     );
   });
+
+  it("rejects an empty path", async () => {
+    const cwd = await mkdtemp(path.join(tmpdir(), "linklike-api-init-cwd-"));
+    tempDirs.push(cwd);
+    const previous = process.cwd();
+    process.chdir(cwd);
+    try {
+      const app = createApp();
+      const res = await app.request("/project/init", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ path: "" }),
+      });
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as { error: string };
+      expect(body.error).toBe("path is a required string");
+      await expect(
+        readFile(path.join(cwd, "project.json"), "utf8"),
+      ).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+    } finally {
+      process.chdir(previous);
+    }
+  });
+
+  it("rejects a whitespace-only path", async () => {
+    const app = createApp();
+    const res = await app.request("/project/init", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ path: "   " }),
+    });
+    expect(res.status).toBe(400);
+  });
 });
 
 describe("POST /project/pick-directory", () => {

@@ -154,6 +154,8 @@ export function App() {
     try {
       const result = await pickDirectory();
       if ("path" in result) {
+        setError(null);
+        setIssues([]);
         setInputPath(result.path);
       }
     } catch (err) {

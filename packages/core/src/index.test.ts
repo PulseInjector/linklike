@@ -1,4 +1,12 @@
-import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -135,6 +143,46 @@ describe("initProjectDir", () => {
     expect(await readFile(path.join(dir, "project.json"), "utf8")).toBe(
       "{ not valid json\n",
     );
+  });
+
+  it("does not overwrite an existing root note", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "linklike-core-init-"));
+    dirs.push(dir);
+    await mkdir(path.join(dir, "nodes"), { recursive: true });
+    await writeFile(path.join(dir, "nodes", "root.mdx"), "KEEP THIS NOTE\n");
+
+    await expect(runCore(initProjectDir(dir))).rejects.toMatchObject({
+      _tag: "ProjectExists",
+    });
+    expect(await readFile(path.join(dir, "nodes", "root.mdx"), "utf8")).toBe(
+      "KEEP THIS NOTE\n",
+    );
+    await expect(
+      readFile(path.join(dir, "project.json"), "utf8"),
+    ).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+  });
+
+  it("removes files written this round when a later write fails", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "linklike-core-init-"));
+    dirs.push(dir);
+    // Dangling symlink: stat follows (ENOENT) so the conflict check passes; wx then hits EEXIST.
+    await symlink("/no/such/linklike-init-target", path.join(dir, "plan.graph.json"));
+
+    await expect(runCore(initProjectDir(dir))).rejects.toMatchObject({
+      _tag: "ProjectExists",
+    });
+    await expect(
+      readFile(path.join(dir, "project.json"), "utf8"),
+    ).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+    await expect(
+      readFile(path.join(dir, "progress.json"), "utf8"),
+    ).rejects.toMatchObject({
+      code: "ENOENT",
+    });
   });
 });
 
