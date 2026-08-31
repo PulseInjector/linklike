@@ -5,6 +5,7 @@ import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 export type MapNodeData = {
   label: string;
   kind: "topic" | "subtopic";
+  isRoot: boolean;
   status: "none" | "learning" | "done" | "skip";
   canDelete: boolean;
   adding: boolean;
@@ -24,7 +25,8 @@ export type SectionFlowNode = Node<Record<string, never>, "section">;
 function cardClass(data: MapNodeData, selected: boolean): string {
   const status = data.status === "none" ? "" : ` is-${data.status}`;
   const selectedClass = selected ? " is-selected" : "";
-  return `map-node map-node--${data.kind}${status}${selectedClass}`;
+  const rootClass = data.isRoot ? " map-node--root" : "";
+  return `map-node map-node--${data.kind}${rootClass}${status}${selectedClass}`;
 }
 
 function Handles() {

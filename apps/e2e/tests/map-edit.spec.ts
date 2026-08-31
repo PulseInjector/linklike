@@ -9,7 +9,13 @@ import {
   copyTwoNodeProject,
   readGraphFile,
 } from "../helpers/project.js";
-import { mapNode, openNodeDrawer, openProject, selectMapNode } from "../helpers/ui.js";
+import {
+  mapNode,
+  openNodeDrawer,
+  openProject,
+  selectMapNode,
+  clickEmptyMapCanvas,
+} from "../helpers/ui.js";
 
 test("click selects a card without opening the drawer", async ({ page }) => {
   const projectDir = await copyTwoNodeProject();
@@ -20,6 +26,53 @@ test("click selects a card without opening the drawer", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Add" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Rename" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Delete" })).toHaveCount(0);
+});
+
+test("clicking the canvas hides node actions", async ({ page }) => {
+  const projectDir = await copyTwoNodeProject();
+  await openProject(page, projectDir);
+
+  await selectMapNode(page, "Second topic");
+  await expect(page.getByRole("button", { name: "Add" })).toBeVisible();
+
+  await clickEmptyMapCanvas(page);
+
+  await expect(page.getByRole("button", { name: "Add" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Rename" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Delete" })).toHaveCount(0);
+});
+
+test("clicking the canvas cancels add", async ({ page }) => {
+  const projectDir = await copyTwoNodeProject();
+  await openProject(page, projectDir);
+  const before = await readGraphFile(projectDir);
+
+  await selectMapNode(page, "Minimal example");
+  await page.getByRole("button", { name: "Add" }).click();
+  await page.getByLabel("New node title").fill("Should not save");
+  await clickEmptyMapCanvas(page);
+
+  await expect(page.getByLabel("New node title")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add" })).toHaveCount(0);
+  await expect(mapNode(page, "Should not save")).toHaveCount(0);
+  expect(await readGraphFile(projectDir)).toEqual(before);
+});
+
+test("clicking the canvas cancels rename", async ({ page }) => {
+  const projectDir = await copyTwoNodeProject();
+  await openProject(page, projectDir);
+  const before = await readGraphFile(projectDir);
+
+  await selectMapNode(page, "Second topic");
+  await page.getByRole("button", { name: "Rename" }).click();
+  await page.getByLabel("Node title", { exact: true }).fill("Should not save");
+  await clickEmptyMapCanvas(page);
+
+  await expect(page.getByLabel("Node title", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add" })).toHaveCount(0);
+  await expect(mapNode(page, "Second topic")).toBeVisible();
+  await expect(mapNode(page, "Should not save")).toHaveCount(0);
+  expect(await readGraphFile(projectDir)).toEqual(before);
 });
 
 test("delete is unavailable when it would remove every node", async ({ page }) => {

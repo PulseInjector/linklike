@@ -290,6 +290,11 @@ button.secondary {
   color: var(--map-subtopic-color);
 }
 
+.map-node--root {
+  background: var(--map-root-bg);
+  color: var(--map-root-color);
+}
+
 .map-node.is-selected {
   outline: 2px solid var(--map-selected-ring);
   outline-offset: 2px;

@@ -30,6 +30,34 @@ export async function selectMapNode(page: Page, title: string): Promise<void> {
   await mapNode(page, title).click();
 }
 
+export async function clickEmptyMapCanvas(page: Page): Promise<void> {
+  const point = await page.evaluate(() => {
+    const pane = document.querySelector(".react-flow__pane");
+    if (!pane) {
+      return null;
+    }
+    const rect = pane.getBoundingClientRect();
+    const blocked = [
+      ...document.querySelectorAll(
+        ".map-node, .map-node-toolbar, .map-node-title-input, .react-flow__controls",
+      ),
+    ].map((node) => node.getBoundingClientRect());
+    for (let y = rect.top + 8; y < rect.bottom - 8; y += 8) {
+      for (let x = rect.left + 8; x < rect.right - 8; x += 8) {
+        const hit = blocked.some(
+          (box) => x >= box.left && x <= box.right && y >= box.top && y <= box.bottom,
+        );
+        if (!hit) {
+          return { x, y };
+        }
+      }
+    }
+    return null;
+  });
+  expect(point).not.toBeNull();
+  await page.mouse.click(point!.x, point!.y);
+}
+
 export async function openNodeDrawer(page: Page, title: string): Promise<void> {
   await mapNode(page, title).dblclick();
   await expect(page.locator(".drawer h2")).toHaveText(title);

@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 
 import tokens from "../../../design/learning-map/tokens.json" with { type: "json" };
-import { copyMinimalProject } from "../helpers/project.js";
+import { copyMinimalProject, copySingleNodeProject } from "../helpers/project.js";
 import { mapNode, openNodeDrawer, openProject } from "../helpers/ui.js";
 
 const screenshots = path.resolve(
@@ -30,6 +30,8 @@ test("home and map use the checked-in light tokens", async ({ page }) => {
 
   const topic = mapNode(page, "Kubernetes overview");
   const subtopic = mapNode(page, "Cluster DNS");
+  await expect(mapNode(page, "Minimal example")).toHaveClass(/map-node--root/);
+  await expect(topic).not.toHaveClass(/map-node--root/);
   await expect(topic).toHaveCSS("background-color", tokens.topic.backgroundRgb);
   await expect(topic).toHaveCSS("color", tokens.topic.colorRgb);
   await expect(topic).toHaveCSS("border-top-color", tokens.topic.borderRgb);
@@ -47,4 +49,14 @@ test("home and map use the checked-in light tokens", async ({ page }) => {
   await access(path.join(screenshots, "topic.png"));
   await access(path.join(screenshots, "subtopic.png"));
   await access(path.join(screenshots, "section.png"));
+});
+
+test("graph root uses the root fill when it has no progress", async ({ page }) => {
+  const projectDir = await copySingleNodeProject();
+  await openProject(page, projectDir);
+
+  const root = mapNode(page, "Only node");
+  await expect(root).toHaveClass(/map-node--root/);
+  await expect(root).toHaveCSS("background-color", tokens.root.backgroundRgb);
+  await expect(root).toHaveCSS("color", tokens.root.colorRgb);
 });

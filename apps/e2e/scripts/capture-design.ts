@@ -77,6 +77,8 @@ function writeTokensCss(tokens) {
   --map-subtopic-bg: ${tokens.subtopic.background};
   --map-subtopic-color: ${tokens.subtopic.color};
   --map-subtopic-hover: ${tokens.subtopic.hover};
+  --map-root-bg: ${tokens.root.background};
+  --map-root-color: ${tokens.root.color};
   --map-node-border: ${tokens.topic.border};
   --map-node-border-width: ${tokens.topic.borderWidth};
   --map-node-radius: ${tokens.topic.borderRadius};

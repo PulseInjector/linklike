@@ -23,7 +23,7 @@ import {
 } from "@linklike/protocol";
 
 import tokens from "../../../design/learning-map/tokens.json";
-import { edgeHandles, layoutLearningMap } from "./layout";
+import { edgeHandles, layoutLearningMap, rootIds } from "./layout";
 import { CardNode, SectionNode } from "./MapNodes";
 import { MAX_ZOOM, MIN_ZOOM, openingViewport } from "./viewport";
 
@@ -86,6 +86,7 @@ export function Map({
 }) {
   const laidOut = useMemo(() => layoutLearningMap(graph), [graph]);
   const graphId = useMemo(() => graph.nodes.map((node) => node.id).join("\0"), [graph]);
+  const roots = useMemo(() => new Set(rootIds(graph)), [graph]);
   const [editMode, setEditMode] = useState<EditMode | null>(null);
   const committingEdit = useRef(false);
   const pendingClick = useRef<{
@@ -182,6 +183,7 @@ export function Map({
       data: {
         label: node.title,
         kind: node.kind,
+        isRoot: roots.has(node.id),
         status: statusOf(progress, node.id),
         canDelete: subtreeNodeIds(graph, node.id).size < graph.nodes.length,
         adding: editMode?.kind === "add" && editMode.id === node.id,
@@ -214,6 +216,7 @@ export function Map({
   }, [
     laidOut,
     progress,
+    roots,
     selectedId,
     editMode,
     onAdd,
@@ -314,6 +317,10 @@ export function Map({
       nodeTypes={nodeTypes}
       onNodeClick={onNodeClick}
       onNodeDoubleClick={onNodeDoubleClick}
+      onPaneClick={() => {
+        cancelEdit();
+        onSelect(null);
+      }}
       nodesDraggable={false}
       nodesConnectable={false}
       edgesFocusable={false}
