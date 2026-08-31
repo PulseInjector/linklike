@@ -8,7 +8,8 @@ Pinned source (only):
 - Repo: https://github.com/devdotfast/review
 - Commit: `ad457e726d04e3f92e1f751bd4bb9ab28c5d514a`
 - File: `packages/progressive-review/app/src/styles.css`
-- Selectors: `.review-document` and the body rules for h1–h3, p, li, code/pre, measure, and font stack
+- Type: `.review-document` body rules for h1–h3, p, li, code/pre, measure, and font stack
+- Color: `.review-app--theme-light` neutral fallbacks (not `.review-canvas-root`)
 
 Playwright imports these files. Keep this directory separate from
 `design/learning-map/`.

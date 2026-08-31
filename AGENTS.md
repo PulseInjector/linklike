@@ -62,6 +62,7 @@ Grow the map from the terminal (validates before writing, creates the node stub)
 
 ```bash
 linklike node add . --title "Pod basics" --parent root
+linklike node rename . root --title "New title"
 linklike node write . root --body "# Notes"
 linklike node delete . pod-basics
 ```

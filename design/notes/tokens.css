@@ -1,12 +1,12 @@
 :root {
   --notes-font-serif: "Newsreader", Georgia, serif;
   --notes-font-mono: "Geist Mono", ui-monospace, monospace;
-  --notes-ink: #e8eaee;
-  --notes-bg: #0a0b0d;
-  --notes-code-bg: #10141c;
-  --notes-pre-bg: #0d0f13;
-  --notes-pre-border: #1c1f26;
-  --notes-link: #4d6ef5;
+  --notes-ink: #1a1a18;
+  --notes-bg: #ffffff;
+  --notes-code-bg: #f4f4f3;
+  --notes-pre-bg: #ffffff;
+  --notes-pre-border: #e0e0de;
+  --notes-link: #2b4fe0;
   --notes-body-size: 15px;
   --notes-body-line: 1.72;
   --notes-measure: 720px;

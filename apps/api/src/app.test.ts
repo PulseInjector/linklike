@@ -243,6 +243,67 @@ describe("api", () => {
     expect(await readFile(path.join(dir, "nodes", "root.mdx"), "utf8")).toBe("");
   });
 
+  it("renames a node title via PATCH and leaves the note file unchanged", async () => {
+    const dir = await makeTempProject();
+    tempDirs.push(dir);
+    const noteBefore = await readFile(path.join(dir, "nodes", "root.mdx"), "utf8");
+    const progressBefore = await readFile(path.join(dir, "progress.json"), "utf8");
+
+    const res = await app.request("/project/nodes/root", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ path: dir, title: "Renamed root" }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      id: string;
+      graph: { nodes: Array<{ id: string; title: string }> };
+    };
+    expect(body.id).toBe("root");
+    expect(body.graph.nodes).toEqual([{ id: "root", title: "Renamed root" }]);
+    const graph = JSON.parse(
+      await readFile(path.join(dir, "plan.graph.json"), "utf8"),
+    ) as { nodes: Array<{ id: string; title: string }> };
+    expect(graph.nodes).toEqual([{ id: "root", title: "Renamed root" }]);
+    expect(await readFile(path.join(dir, "nodes", "root.mdx"), "utf8")).toBe(
+      noteBefore,
+    );
+    expect(await readFile(path.join(dir, "progress.json"), "utf8")).toBe(
+      progressBefore,
+    );
+  });
+
+  it("rejects an empty title on PATCH", async () => {
+    const dir = await makeTempProject();
+    tempDirs.push(dir);
+
+    const res = await app.request("/project/nodes/root", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ path: dir, title: " " }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { tag: string };
+    expect(body.tag).toBe("EmptyTitle");
+  });
+
+  it("rejects an unknown node on PATCH", async () => {
+    const dir = await makeTempProject();
+    tempDirs.push(dir);
+
+    const res = await app.request("/project/nodes/ghost", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ path: dir, title: "X" }),
+    });
+
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { tag: string };
+    expect(body.tag).toBe("UnknownNode");
+  });
+
   it("rejects PUT on an invalid project", async () => {
     const dir = await makeTempProject();
     tempDirs.push(dir);

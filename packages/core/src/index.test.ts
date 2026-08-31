@@ -19,6 +19,7 @@ import {
   initProjectDir,
   loadProjectDir,
   probeProjectDir,
+  renameNode,
   runCore,
   setProgress,
   writeNodeContent,
@@ -318,6 +319,61 @@ describe("addNode", () => {
     const before = await readFile(path.join(dir, "progress.json"), "utf8");
     await runCore(addNode(dir, { title: "Child", parent: "root" }));
     expect(await readFile(path.join(dir, "progress.json"), "utf8")).toBe(before);
+  });
+});
+
+describe("renameNode", () => {
+  it("updates only the title and leaves id, note file, and progress alone", async () => {
+    const dir = await makeProject();
+    const noteBefore = await readFile(path.join(dir, "nodes", "root.mdx"), "utf8");
+    const progressBefore = await readFile(path.join(dir, "progress.json"), "utf8");
+
+    const result = await runCore(renameNode(dir, "root", "  New title  "));
+    expect(result.id).toBe("root");
+    expect(result.graph.nodes).toEqual([{ id: "root", title: "New title" }]);
+
+    const graph = planGraphSchema.parse(
+      JSON.parse(await readFile(path.join(dir, "plan.graph.json"), "utf8")),
+    );
+    expect(graph.nodes).toEqual([{ id: "root", title: "New title" }]);
+    expect(await readFile(path.join(dir, "nodes", "root.mdx"), "utf8")).toBe(
+      noteBefore,
+    );
+    expect(await readFile(path.join(dir, "progress.json"), "utf8")).toBe(
+      progressBefore,
+    );
+  });
+
+  it("rejects an empty title", async () => {
+    const dir = await makeProject();
+    const graphBefore = await readFile(path.join(dir, "plan.graph.json"), "utf8");
+    await expect(runCore(renameNode(dir, "root", "  "))).rejects.toMatchObject({
+      _tag: "EmptyTitle",
+    });
+    expect(await readFile(path.join(dir, "plan.graph.json"), "utf8")).toBe(graphBefore);
+  });
+
+  it("rejects an unknown or illegal node id", async () => {
+    const dir = await makeProject();
+    await expect(runCore(renameNode(dir, "ghost", "X"))).rejects.toMatchObject({
+      _tag: "UnknownNode",
+      nodeId: "ghost",
+    });
+    await expect(runCore(renameNode(dir, "../secret", "X"))).rejects.toMatchObject({
+      _tag: "InvalidNodeId",
+    });
+  });
+
+  it("refuses to mutate an invalid project", async () => {
+    const dir = await makeProject();
+    await rm(path.join(dir, "nodes", "root.mdx"));
+    await expect(runCore(renameNode(dir, "root", "X"))).rejects.toMatchObject({
+      _tag: "InvalidProject",
+    });
+    const graph = planGraphSchema.parse(
+      JSON.parse(await readFile(path.join(dir, "plan.graph.json"), "utf8")),
+    );
+    expect(graph.nodes).toEqual([{ id: "root", title: "Root" }]);
   });
 });
 

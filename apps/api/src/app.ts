@@ -9,6 +9,7 @@ import {
   loadProjectDir,
   probeProjectDir,
   readNodeContent,
+  renameNode,
   runCore,
   setProgress,
   writeNodeContent,
@@ -181,6 +182,32 @@ export function createApp(
         writeNodeContent(path.resolve(dir), nodeId, markdown),
       );
       return c.json({ id: nodeId, markdown: written });
+    } catch (error) {
+      if (isLinklikeError(error)) {
+        const { status, body: responseBody } = coreResponse(error);
+        return c.json(responseBody, status);
+      }
+      return c.json({ tag: "UnknownError", error: String(error) }, 500);
+    }
+  });
+
+  app.patch("/project/nodes/:id", async (c) => {
+    let body: unknown;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "request body must be JSON" }, 400);
+    }
+
+    const { path: dir, title } = (body ?? {}) as Record<string, unknown>;
+    if (typeof dir !== "string" || typeof title !== "string") {
+      return c.json({ error: "path and title are required strings" }, 400);
+    }
+
+    const nodeId = c.req.param("id");
+    try {
+      const result = await runCore(renameNode(path.resolve(dir), nodeId, title));
+      return c.json(result);
     } catch (error) {
       if (isLinklikeError(error)) {
         const { status, body: responseBody } = coreResponse(error);

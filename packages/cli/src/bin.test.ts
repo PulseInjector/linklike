@@ -71,6 +71,32 @@ describe("init", () => {
   });
 });
 
+describe("node rename", () => {
+  it("updates the graph title and leaves the note file in place", async () => {
+    const dir = await makeProject();
+    const noteBefore = await readFile(path.join(dir, "nodes", "root.mdx"), "utf8");
+
+    const { stdout } = await execFileAsync(process.execPath, [
+      cliBin,
+      "node",
+      "rename",
+      dir,
+      "root",
+      "--title",
+      "Renamed",
+    ]);
+    expect(stdout).toContain("Renamed root");
+
+    const graph = JSON.parse(
+      await readFile(path.join(dir, "plan.graph.json"), "utf8"),
+    ) as { nodes: Array<{ id: string; title: string }> };
+    expect(graph.nodes).toEqual([{ id: "root", title: "Renamed" }]);
+    expect(await readFile(path.join(dir, "nodes", "root.mdx"), "utf8")).toBe(
+      noteBefore,
+    );
+  });
+});
+
 describe("node write", () => {
   it("accepts a --body that starts with dashes", async () => {
     const dir = await makeProject();

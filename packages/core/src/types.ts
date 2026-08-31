@@ -34,6 +34,11 @@ export interface AddNodeResult {
   nodeFileCreated: boolean;
 }
 
+export interface RenameNodeResult {
+  id: string;
+  graph: PlanGraph;
+}
+
 export interface DeleteNodeResult {
   deletedIds: string[];
   graph: PlanGraph;

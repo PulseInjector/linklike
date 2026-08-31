@@ -63,6 +63,8 @@ function OpeningView({ graphId }: { graphId: string }) {
   return null;
 }
 
+type EditMode = { kind: "add" | "rename"; id: string };
+
 export function Map({
   graph,
   progress,
@@ -70,6 +72,7 @@ export function Map({
   onSelect,
   onOpenNotes,
   onAdd,
+  onRename,
   onDelete,
 }: {
   graph: PlanGraph;
@@ -78,12 +81,13 @@ export function Map({
   onSelect: (nodeId: string | null) => void;
   onOpenNotes: (nodeId: string) => void;
   onAdd: (parentId: string, title: string) => Promise<void>;
+  onRename: (nodeId: string, title: string) => Promise<void>;
   onDelete: (nodeId: string) => Promise<void>;
 }) {
   const laidOut = useMemo(() => layoutLearningMap(graph), [graph]);
   const graphId = useMemo(() => graph.nodes.map((node) => node.id).join("\0"), [graph]);
-  const [addingForId, setAddingForId] = useState<string | null>(null);
-  const committingAdd = useRef(false);
+  const [editMode, setEditMode] = useState<EditMode | null>(null);
+  const committingEdit = useRef(false);
   const pendingClick = useRef<{
     id: string;
     timer: ReturnType<typeof setTimeout>;
@@ -98,30 +102,48 @@ export function Map({
   }, []);
 
   useEffect(() => {
-    if (addingForId && addingForId !== selectedId) {
-      setAddingForId(null);
+    if (editMode && editMode.id !== selectedId) {
+      setEditMode(null);
     }
-  }, [selectedId, addingForId]);
+  }, [selectedId, editMode]);
 
-  const cancelAdd = () => {
-    setAddingForId(null);
+  const cancelEdit = () => {
+    setEditMode(null);
   };
 
   const commitAdd = async (parentId: string, rawTitle: string) => {
-    if (committingAdd.current) {
+    if (committingEdit.current) {
       return;
     }
     const title = rawTitle.trim();
     if (!title) {
-      cancelAdd();
+      cancelEdit();
       return;
     }
-    committingAdd.current = true;
+    committingEdit.current = true;
     try {
       await onAdd(parentId, title);
-      cancelAdd();
+      cancelEdit();
     } finally {
-      committingAdd.current = false;
+      committingEdit.current = false;
+    }
+  };
+
+  const commitRename = async (nodeId: string, rawTitle: string) => {
+    if (committingEdit.current) {
+      return;
+    }
+    const title = rawTitle.trim();
+    if (!title) {
+      cancelEdit();
+      return;
+    }
+    committingEdit.current = true;
+    try {
+      await onRename(nodeId, title);
+      cancelEdit();
+    } finally {
+      committingEdit.current = false;
     }
   };
 
@@ -162,9 +184,13 @@ export function Map({
         kind: node.kind,
         status: statusOf(progress, node.id),
         canDelete: subtreeNodeIds(graph, node.id).size < graph.nodes.length,
-        adding: addingForId === node.id,
+        adding: editMode?.kind === "add" && editMode.id === node.id,
+        renaming: editMode?.kind === "rename" && editMode.id === node.id,
         onAdd: () => {
-          setAddingForId(node.id);
+          setEditMode({ kind: "add", id: node.id });
+        },
+        onRename: () => {
+          setEditMode({ kind: "rename", id: node.id });
         },
         onDelete: () => {
           void requestDelete(node.id).catch(() => undefined);
@@ -172,7 +198,10 @@ export function Map({
         onCommitAdd: (title: string) => {
           void commitAdd(node.id, title).catch(() => undefined);
         },
-        onCancelAdd: cancelAdd,
+        onCommitRename: (title: string) => {
+          void commitRename(node.id, title).catch(() => undefined);
+        },
+        onCancelEdit: cancelEdit,
         onOpenNotes: () => onOpenNotes(node.id),
       },
       selected: node.id === selectedId,
@@ -182,7 +211,17 @@ export function Map({
     }));
 
     return [...frames, ...cards];
-  }, [laidOut, progress, selectedId, addingForId, onAdd, onDelete, onOpenNotes, graph]);
+  }, [
+    laidOut,
+    progress,
+    selectedId,
+    editMode,
+    onAdd,
+    onRename,
+    onDelete,
+    onOpenNotes,
+    graph,
+  ]);
 
   const edges = useMemo<Edge[]>(() => {
     // This file's Map component shadows the constructor; Map.get skips prototype keys.
@@ -219,7 +258,7 @@ export function Map({
       return;
     }
     const target = event.target as HTMLElement | null;
-    if (target?.closest(".map-node-toolbar")) {
+    if (target?.closest(".map-node-toolbar, .map-node-title-input")) {
       if (pendingClick.current) {
         clearTimeout(pendingClick.current.timer);
         pendingClick.current = null;
@@ -258,7 +297,7 @@ export function Map({
       return;
     }
     const target = event.target as HTMLElement | null;
-    if (target?.closest(".map-node-toolbar")) {
+    if (target?.closest(".map-node-toolbar, .map-node-title-input")) {
       return;
     }
     if (pendingClick.current) {
@@ -280,7 +319,7 @@ export function Map({
       edgesFocusable={false}
       elementsSelectable
       deleteKeyCode={null}
-      panActivationKeyCode={addingForId ? null : "Space"}
+      panActivationKeyCode={editMode ? null : "Space"}
       minZoom={MIN_ZOOM}
       maxZoom={MAX_ZOOM}
       panOnScroll

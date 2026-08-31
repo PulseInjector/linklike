@@ -7,6 +7,7 @@ import {
   initProjectDir,
   isLinklikeError,
   linklikeErrorMessage,
+  renameNode,
   runCore,
   setProgress,
   validateProjectDir,
@@ -22,6 +23,7 @@ Usage:
   linklike validate <directory> [--json]
   linklike progress set <directory> <nodeId> --status <${PROGRESS_WRITE_STATUSES.join("|")}>
   linklike node add <directory> --title <title> [--parent <nodeId>]
+  linklike node rename <directory> <nodeId> --title <title>
   linklike node delete <directory> <nodeId>
   linklike node write <directory> <nodeId> [--body <markdown>]
 `);
@@ -111,6 +113,20 @@ async function main(): Promise<void> {
     if (result.nodeFileCreated) {
       console.log(`Created nodes/${result.id}.mdx`);
     }
+    return;
+  }
+
+  if (command === "node" && rest[0] === "rename") {
+    const target = rest[1];
+    const nodeId = rest[2];
+    const title = parseFlag(rest, "--title");
+    if (!target || !nodeId || !title) {
+      throw new Error(
+        "usage: linklike node rename <directory> <nodeId> --title <title>",
+      );
+    }
+    const result = await runCore(renameNode(path.resolve(target), nodeId, title));
+    console.log(`Renamed ${result.id}`);
     return;
   }
 
