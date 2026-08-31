@@ -1,8 +1,13 @@
+import { mkdtemp, readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
 import { expect, test } from "@playwright/test";
 
 import {
   copyMinimalProject,
   copyTwoNodeProject,
+  corruptProjectJson,
   readGraphFile,
   setProjectName,
 } from "../helpers/project.js";
@@ -52,17 +57,12 @@ async function submitProjectPath(page: import("@playwright/test").Page): Promise
   });
 }
 
-// Classification map — tmp/reviews/ba93fc4/05-repro-map.md
-// A F1: CLI delete after chmod a-w progress.json (half-commit)
-// A F2: CLI node write on project missing nodes/root.mdx
-// A F4: UI Delete on root / CLI node delete root → LastNode
-// A F6: core deleteNode trash assertion on darwin (XDG vs Finder)
-// A F7: CLI node write --body '---'
-// A F8: failed add/delete → unhandledrejection (void commitAdd/requestDelete)
-// A F9: darwinTrash replace \\ with / on a path that contains backslash
-// B F3: this file — slow POST + double Enter
-// D F5 OpeningView graphId
-// C: none this round
+// Classification map — tmp/reviews/11dcc35/05-repro-map.md
+// A F2: CLI dangling symlink — probe uninitialized, init ProjectExists
+// B F1: this file — delayed probe for URL path overwrites draft empty folder
+// B F3: this file — GET /project 500 after init when ?path already set
+// 不复现: #25 vs root.mdx; canOpen/invalid retry; App.tsx structure; ponytail
+// Previous ba93fc4: A F1–F2,F4,F6–F9; B double-Enter add; D F5 OpeningView
 
 test.describe("audit reproducers (timing / network only)", () => {
   test("stale GET /project overwrites UI after faster path switch", async ({
@@ -169,6 +169,56 @@ test.describe("audit reproducers (timing / network only)", () => {
     await expect(page.getByRole("alert")).toBeVisible();
     await expect(page.getByRole("button", { name: "Reload" })).toBeVisible();
     await expect(page.locator("#path-input")).toHaveCount(0);
+  });
+
+  test("stale URL probe does not switch an empty draft to Open", async ({ page }) => {
+    const invalidDir = await copyMinimalProject();
+    await corruptProjectJson(invalidDir);
+    const emptyDir = await mkdtemp(path.join(tmpdir(), "linklike-e2e-stale-probe-"));
+
+    await page.route(
+      "**/api/project/probe?path=*",
+      delayGetForPath(invalidDir, SLOW_GET_MS),
+    );
+
+    await page.goto(`/?path=${encodeURIComponent(invalidDir)}`);
+    await page.locator("#path-input").fill(emptyDir);
+
+    await page.waitForTimeout(SLOW_GET_MS + 500);
+
+    await expect(page.getByRole("button", { name: "Initialize" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Open project" })).toBeDisabled();
+    await expect(
+      readFile(path.join(emptyDir, "project.json"), "utf8"),
+    ).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+  });
+
+  test("init then failed load does not keep Initialize", async ({ page }) => {
+    const dir = await mkdtemp(path.join(tmpdir(), "linklike-e2e-init-loadfail-"));
+
+    await page.route("**/api/project?path=*", async (route) => {
+      if (route.request().method() !== "GET") {
+        await route.continue();
+        return;
+      }
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ tag: "IoError", error: "offline" }),
+      });
+    });
+
+    await page.goto(`/?path=${encodeURIComponent(dir)}`);
+    await expect(page.getByRole("status")).toContainText(
+      "This folder is not a Linklike project yet",
+    );
+    await page.getByRole("button", { name: "Initialize" }).click();
+
+    await expect(page.getByRole("alert")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Initialize" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Open project" })).toBeEnabled();
   });
 
   test("F3: slow POST add does not create two nodes from double Enter", async ({

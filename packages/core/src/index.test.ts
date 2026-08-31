@@ -266,6 +266,19 @@ describe("addNode", () => {
     expect(load.project.name).toBe("t");
   });
 
+  it("falls back to node when a title has no latin slug", async () => {
+    const dir = await makeProject();
+    const first = await runCore(addNode(dir, { title: "协议一", parent: "root" }));
+    const second = await runCore(addNode(dir, { title: "协议二", parent: "root" }));
+    expect(first.id).toBe("node");
+    expect(second.id).toBe("node-2");
+    const graph = planGraphSchema.parse(
+      JSON.parse(await readFile(path.join(dir, "plan.graph.json"), "utf8")),
+    );
+    expect(graph.nodes.map((item) => item.title)).toContain("协议一");
+    expect(graph.nodes.map((item) => item.title)).toContain("协议二");
+  });
+
   it("deduplicates ids from the same title", async () => {
     const dir = await makeProject();
     const first = await runCore(addNode(dir, { title: "Networking" }));
