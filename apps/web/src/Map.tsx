@@ -23,7 +23,7 @@ import {
 } from "@linklike/protocol";
 
 import tokens from "../../../design/learning-map/tokens.json";
-import { layoutLearningMap } from "./layout";
+import { edgeHandles, layoutLearningMap } from "./layout";
 import { CardNode, SectionNode } from "./MapNodes";
 import { MAX_ZOOM, MIN_ZOOM, openingViewport } from "./viewport";
 
@@ -187,23 +187,19 @@ export function Map({
   const edges = useMemo<Edge[]>(() => {
     const byId = Object.fromEntries(laidOut.nodes.map((node) => [node.id, node]));
     return graph.edges.map((edge, index) => {
+      const source = byId[edge.from];
       const target = byId[edge.to];
       const dashed = target?.kind === "subtopic";
-      let sourceHandle = "source-bottom";
-      let targetHandle = "target-top";
-      if (target?.side === "left") {
-        sourceHandle = "source-left";
-        targetHandle = "target-right";
-      } else if (target?.side === "right") {
-        sourceHandle = "source-right";
-        targetHandle = "target-left";
-      }
+      const handles =
+        source && target
+          ? edgeHandles(source, target)
+          : { sourceHandle: "source-bottom", targetHandle: "target-top" };
       return {
         id: `${edge.from}->${edge.to}-${index}`,
         source: edge.from,
         target: edge.to,
-        sourceHandle,
-        targetHandle,
+        sourceHandle: handles.sourceHandle,
+        targetHandle: handles.targetHandle,
         type: "smoothstep",
         style: {
           stroke: tokens.edge.stroke,

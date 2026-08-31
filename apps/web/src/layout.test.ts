@@ -5,6 +5,7 @@ import { planGraphSchema, type PlanGraph } from "@linklike/protocol";
 import minimalGraphJson from "../../../fixtures/minimal-project/plan.graph.json";
 import {
   childrenByParent,
+  edgeHandles,
   layoutLearningMap,
   nodeHeight,
   type LaidOutNode,
@@ -142,6 +143,10 @@ function expectSameSpineX(nodes: LaidOutNode[]): void {
   expect(Math.max(...xs) - Math.min(...xs)).toBeLessThan(1);
 }
 
+function expectOffsetX(parent: LaidOutNode, child: LaidOutNode): void {
+  expect(Math.abs(spineMidX(parent) - spineMidX(child))).toBeGreaterThan(20);
+}
+
 describe("layoutLearningMap deep trees", () => {
   const chain = graph(
     [
@@ -168,36 +173,58 @@ describe("layoutLearningMap deep trees", () => {
     expect(children.get("l4")).toEqual([]);
   });
 
-  it("places every non-leaf ancestor on the same spine x", () => {
+  it("keeps only the root and its topic child on the spine", () => {
     const placed = byId(layoutLearningMap(chain).nodes);
     expect(placed.root.side).toBe("spine");
     expect(placed.l1.side).toBe("spine");
-    expect(placed.l2.side).toBe("spine");
-    expect(placed.l3.side).toBe("spine");
+    expect(placed.l2.side).not.toBe("spine");
+    expect(placed.l3.side).not.toBe("spine");
     expect(placed.l4.side).not.toBe("spine");
+    expect(placed.l1.kind).toBe("topic");
+    expect(placed.l2.kind).toBe("topic");
+    expect(placed.l3.kind).toBe("topic");
     expect(placed.l4.kind).toBe("subtopic");
-    expectSameSpineX([placed.root, placed.l1, placed.l2, placed.l3]);
+    expectSameSpineX([placed.root, placed.l1]);
     expect(placed.l1.position.y).toBeGreaterThan(placed.root.position.y);
-    expect(placed.l2.position.y).toBeGreaterThan(placed.l1.position.y);
-    expect(placed.l3.position.y).toBeGreaterThan(placed.l2.position.y);
   });
 
-  it("promotes a fanned leaf onto the spine once it gains a child", () => {
+  it("nests deeper topics beside their parent instead of flattening onto the spine", () => {
+    const placed = byId(layoutLearningMap(chain).nodes);
+    expectOffsetX(placed.l1, placed.l2);
+    expect(placed.l3.position.y).toBeGreaterThan(
+      placed.l2.position.y + placed.l2.height / 2,
+    );
+    expect(placed.l4.position.y).toBeGreaterThan(
+      placed.l3.position.y + placed.l3.height / 2,
+    );
+  });
+
+  it("keeps a fanned leaf off the spine after it gains a child", () => {
     const leaf = graph(
       [
         { id: "root", title: "Root" },
+        { id: "topic", title: "Topic" },
         { id: "child", title: "Child" },
+        { id: "sib", title: "Sibling" },
       ],
-      [["root", "child"]],
+      [
+        ["root", "topic"],
+        ["topic", "child"],
+        ["topic", "sib"],
+      ],
     );
     const withGrandchild = graph(
       [
         { id: "root", title: "Root" },
+        { id: "topic", title: "Topic" },
         { id: "child", title: "Child" },
+        { id: "sib", title: "Sibling" },
         { id: "grand", title: "Grandchild" },
       ],
       [
-        ["root", "child"],
+        ["root", "topic"],
+        ["topic", "child"],
+        ["topic", "sib"],
         ["child", "grand"],
       ],
     );
@@ -206,22 +233,28 @@ describe("layoutLearningMap deep trees", () => {
     const after = byId(layoutLearningMap(withGrandchild).nodes);
 
     expect(before.child.side).not.toBe("spine");
-    expect(after.child.side).toBe("spine");
-    expect(after.grand.side).not.toBe("spine");
-    expectSameSpineX([after.root, after.child]);
+    expect(before.sib.side).not.toBe("spine");
+    expect(after.child.side).not.toBe("spine");
+    expect(after.sib.side).not.toBe("spine");
+    expect(after.child.kind).toBe("topic");
+    expect(after.sib.kind).toBe("subtopic");
+    expect(after.grand.kind).toBe("subtopic");
+    expectSameSpineX([after.root, after.topic]);
+    expectOffsetX(after.topic, after.child);
+    expectOffsetX(after.topic, after.sib);
+    expect(after.grand.position.y).toBeGreaterThan(after.child.position.y);
   });
 
-  it("does not indent nested topics away from the spine", () => {
-    const placed = byId(layoutLearningMap(chain).nodes);
-    expect(Math.abs(spineMidX(placed.l3) - spineMidX(placed.root))).toBeLessThan(1);
-    expect(Math.abs(spineMidX(placed.l1) - spineMidX(placed.l2))).toBeLessThan(1);
+  it("draws a section around a nested topic's children", () => {
+    const { sections } = layoutLearningMap(chain);
+    expect(sections.some((section) => section.parentId === "l2")).toBe(true);
   });
 });
 
 describe("layoutLearningMap fixtures and bushy nests", () => {
   const minimal = planGraphSchema.parse(minimalGraphJson);
 
-  it("keeps nested topics in fixtures/minimal-project on one spine", () => {
+  it("keeps depth-1 topics on the spine and nests workloads beside kubernetes-overview", () => {
     const children = childrenByParent(minimal);
     expect(children.get("root")).toEqual(
       expect.arrayContaining(["kubernetes-overview", "pod-basics"]),
@@ -233,10 +266,19 @@ describe("layoutLearningMap fixtures and bushy nests", () => {
 
     const placed = byId(layoutLearningMap(minimal).nodes);
     expect(placed["kubernetes-overview"].side).toBe("spine");
-    expect(placed.workloads.side).toBe("spine");
-    expect(placed.replicasets.side).not.toBe("spine");
-    expect(placed.statefulsets.side).not.toBe("spine");
-    expectSameSpineX([placed.root, placed["kubernetes-overview"], placed.workloads]);
+    expect(placed["pod-basics"].side).toBe("spine");
+    expect(placed.workloads.side).not.toBe("spine");
+    expect(placed.workloads.kind).toBe("topic");
+    expect(placed.replicasets.kind).toBe("subtopic");
+    expect(placed.statefulsets.kind).toBe("subtopic");
+    expectSameSpineX([
+      placed.root,
+      placed["kubernetes-overview"],
+      placed["pod-basics"],
+    ]);
+    expectOffsetX(placed["kubernetes-overview"], placed.workloads);
+    expect(placed.replicasets.position.y).toBeGreaterThan(placed.workloads.position.y);
+    expect(placed.statefulsets.position.y).toBeGreaterThan(placed.workloads.position.y);
   });
 
   const grown = graph(
@@ -286,19 +328,86 @@ describe("layoutLearningMap fixtures and bushy nests", () => {
     expect(children.get("n3")).toEqual(["n4"]);
   });
 
-  it("stacks every non-leaf of a grown map on the spine", () => {
+  it("places only root-level topics on the spine of a grown map", () => {
     const placed = byId(layoutLearningMap(grown).nodes);
-    const spineIds = ["root", "mid-b", "mid-d", "mid-g", "mid-c", "mcp", "n2", "n3"];
-    for (const id of spineIds) {
-      expect(placed[id].side, id).toBe("spine");
+    expectSameSpineX([placed.root, placed["mid-b"], placed["mid-c"]]);
+
+    for (const id of ["mid-d", "mid-g", "mcp", "n2", "n3"]) {
+      expect(placed[id].side, id).not.toBe("spine");
+      expect(placed[id].kind, id).toBe("topic");
     }
-    expectSameSpineX(spineIds.map((id) => placed[id]));
 
     expect(placed["leaf-a"].side).not.toBe("spine");
     expect(placed.loop.side).not.toBe("spine");
-    expect(placed.n1.side).not.toBe("spine");
-    expect(placed.n4.side).not.toBe("spine");
+    expect(placed.n1.kind).toBe("subtopic");
+    expect(placed.n4.kind).toBe("subtopic");
+    expectOffsetX(placed["mid-b"], placed["mid-d"]);
+    expectOffsetX(placed["mid-b"], placed["mid-g"]);
+    expectOffsetX(placed["mid-c"], placed.mcp);
+  });
+
+  it("keeps parent, child, and sibling distinguishable after a leaf gains a child", () => {
+    const placed = byId(layoutLearningMap(grown).nodes);
+    expect(placed["mid-d"].kind).toBe("topic");
+    expect(placed["mid-g"].kind).toBe("topic");
     expect(placed["leaf-e"].kind).toBe("subtopic");
     expect(placed["leaf-f"].kind).toBe("subtopic");
+    expect(
+      Math.abs(spineMidX(placed["mid-d"]) - spineMidX(placed["mid-g"])),
+    ).toBeGreaterThan(20);
+    expect(placed["leaf-e"].position.y).toBeGreaterThan(placed["mid-d"].position.y);
+    expect(placed["leaf-h"].position.y).toBeGreaterThan(placed["mid-g"].position.y);
+  });
+});
+
+describe("edgeHandles", () => {
+  it("uses side handles when the target sits beside the source", () => {
+    const source = {
+      id: "a",
+      title: "A",
+      kind: "topic" as const,
+      side: "spine" as const,
+      position: { x: 100, y: 100 },
+      width: 80,
+      height: 40,
+    };
+    const target = {
+      id: "b",
+      title: "B",
+      kind: "subtopic" as const,
+      side: "right" as const,
+      position: { x: 220, y: 100 },
+      width: 80,
+      height: 40,
+    };
+    expect(edgeHandles(source, target)).toEqual({
+      sourceHandle: "source-right",
+      targetHandle: "target-left",
+    });
+  });
+
+  it("uses vertical handles when the target sits below the source", () => {
+    const source = {
+      id: "a",
+      title: "A",
+      kind: "topic" as const,
+      side: "right" as const,
+      position: { x: 200, y: 40 },
+      width: 80,
+      height: 40,
+    };
+    const target = {
+      id: "b",
+      title: "B",
+      kind: "subtopic" as const,
+      side: "right" as const,
+      position: { x: 200, y: 120 },
+      width: 80,
+      height: 40,
+    };
+    expect(edgeHandles(source, target)).toEqual({
+      sourceHandle: "source-bottom",
+      targetHandle: "target-top",
+    });
   });
 });

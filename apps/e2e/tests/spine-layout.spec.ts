@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import {
   addNodeViaCli,
+  copyMinimalProject,
   copyReferenceMap,
   copySpineProject,
   readGraphFile,
@@ -63,6 +64,83 @@ test("spine layout fans subtopics and keeps plan.graph.json free of position", a
 
   await openNodeDrawer(page, "Introduction");
   await expect(page.locator(".drawer h2")).toHaveText("Introduction");
+});
+
+test("adding a child under a leaf keeps the former leaf off the spine", async ({
+  page,
+}) => {
+  const projectDir = await copySpineProject();
+  await openProject(page, projectDir);
+
+  const intro = mapNode(page, "Introduction");
+  const what = mapNode(page, "What is Data Engineering?");
+  const basics = mapNode(page, "Learn the Basics");
+  const introBox = await intro.boundingBox();
+  const whatBox = await what.boundingBox();
+  const basicsBox = await basics.boundingBox();
+  expect(introBox).toBeTruthy();
+  expect(whatBox).toBeTruthy();
+  expect(basicsBox).toBeTruthy();
+
+  const introMidX = introBox!.x + introBox!.width / 2;
+  expect(Math.abs(introMidX - (basicsBox!.x + basicsBox!.width / 2))).toBeLessThan(24);
+  expect(Math.abs(introMidX - (whatBox!.x + whatBox!.width / 2))).toBeGreaterThan(40);
+
+  await addNodeViaCli(projectDir, "Nested grandchild", "what-is-data-engineering");
+  await page.getByRole("button", { name: "Reload" }).click();
+  await expect(mapNode(page, "Nested grandchild")).toBeVisible();
+
+  const introAfter = await mapNode(page, "Introduction").boundingBox();
+  const whatAfter = await mapNode(page, "What is Data Engineering?").boundingBox();
+  const basicsAfter = await mapNode(page, "Learn the Basics").boundingBox();
+  const grandAfter = await mapNode(page, "Nested grandchild").boundingBox();
+  const skillsAfter = await mapNode(page, "Skills and Responsibilities").boundingBox();
+  expect(introAfter).toBeTruthy();
+  expect(whatAfter).toBeTruthy();
+  expect(basicsAfter).toBeTruthy();
+  expect(grandAfter).toBeTruthy();
+  expect(skillsAfter).toBeTruthy();
+
+  const introMidAfter = introAfter!.x + introAfter!.width / 2;
+  expect(
+    Math.abs(introMidAfter - (basicsAfter!.x + basicsAfter!.width / 2)),
+  ).toBeLessThan(24);
+  expect(
+    Math.abs(introMidAfter - (whatAfter!.x + whatAfter!.width / 2)),
+  ).toBeGreaterThan(40);
+  expect(grandAfter!.y).toBeGreaterThan(whatAfter!.y);
+  expect(
+    Math.abs(introMidAfter - (skillsAfter!.x + skillsAfter!.width / 2)),
+  ).toBeGreaterThan(40);
+});
+
+test("minimal-project nests workloads beside kubernetes-overview", async ({ page }) => {
+  const projectDir = await copyMinimalProject();
+  await openProject(page, projectDir);
+
+  const overview = mapNode(page, "Kubernetes overview");
+  const workloads = mapNode(page, "Workloads");
+  const pods = mapNode(page, "Pod basics");
+  const replica = mapNode(page, "ReplicaSets");
+  await expect(overview).toBeVisible();
+  await expect(workloads).toBeVisible();
+
+  const overviewBox = await overview.boundingBox();
+  const workloadsBox = await workloads.boundingBox();
+  const podsBox = await pods.boundingBox();
+  const replicaBox = await replica.boundingBox();
+  expect(overviewBox).toBeTruthy();
+  expect(workloadsBox).toBeTruthy();
+  expect(podsBox).toBeTruthy();
+  expect(replicaBox).toBeTruthy();
+
+  const overviewMidX = overviewBox!.x + overviewBox!.width / 2;
+  const podsMidX = podsBox!.x + podsBox!.width / 2;
+  const workloadsMidX = workloadsBox!.x + workloadsBox!.width / 2;
+  expect(Math.abs(overviewMidX - podsMidX)).toBeLessThan(24);
+  expect(Math.abs(overviewMidX - workloadsMidX)).toBeGreaterThan(40);
+  expect(replicaBox!.y).toBeGreaterThan(workloadsBox!.y);
+  await expect(page.locator(".map-section").first()).toBeVisible();
 });
 
 test("section frames do not capture canvas pan", async ({ page }) => {
