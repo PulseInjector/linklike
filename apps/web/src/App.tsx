@@ -78,11 +78,14 @@ export function App() {
   const [contentEpoch, setContentEpoch] = useState(0);
 
   const pathRef = useRef(path);
+  const inputPathRef = useRef(inputPath);
   const loadGen = useRef(0);
   const probeGen = useRef(0);
   const progressGen = useRef(0);
   const graphGen = useRef(0);
   const dataPathRef = useRef<string | null>(null);
+  pathRef.current = path;
+  inputPathRef.current = inputPath;
 
   const applyProbe = useCallback((result: FolderProbe) => {
     setProbe(result);
@@ -188,7 +191,12 @@ export function App() {
     void (async () => {
       try {
         const result = await probeProject(path);
-        if (cancelled || pathRef.current !== path) {
+        // Draft edits do not change `path` until Open/Initialize.
+        if (
+          cancelled ||
+          pathRef.current !== path ||
+          inputPathRef.current.trim() !== path
+        ) {
           return;
         }
         applyProbe(result);
@@ -196,7 +204,11 @@ export function App() {
           void load(path);
         }
       } catch (err) {
-        if (cancelled || pathRef.current !== path) {
+        if (
+          cancelled ||
+          pathRef.current !== path ||
+          inputPathRef.current.trim() !== path
+        ) {
           return;
         }
         setErrorTitle("Could not open this project.");
