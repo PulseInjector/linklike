@@ -1,4 +1,12 @@
-import { mkdir, open, readFile, stat, unlink, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  open,
+  readFile,
+  rmdir,
+  stat,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -28,6 +36,9 @@ import {
   LastNode,
   linklikeErrorMessage,
   LockTimeout,
+  NotADirectory,
+  PathNotFound,
+  ProjectExists,
   UnknownNode,
   UnknownParent,
   type LinklikeError,
@@ -38,6 +49,7 @@ import type {
   AddNodeOptions,
   AddNodeResult,
   DeleteNodeResult,
+  FolderProbe,
   ProjectData,
   ValidationIssue,
   ValidationResult,
@@ -47,6 +59,7 @@ export type {
   AddNodeOptions,
   AddNodeResult,
   DeleteNodeResult,
+  FolderProbe,
   ProjectData,
   ValidationIssue,
   ValidationResult,
@@ -60,6 +73,9 @@ export {
   IoError,
   LastNode,
   LockTimeout,
+  NotADirectory,
+  PathNotFound,
+  ProjectExists,
   UnknownNode,
   UnknownParent,
   isLinklikeError,
@@ -74,6 +90,23 @@ const LOCK_STALE_MS = 30_000;
 const LOCK_WAIT_MS = 10_000;
 
 type LockHandle = Awaited<ReturnType<typeof open>>;
+
+const statPath = (
+  filePath: string,
+): Effect.Effect<Awaited<ReturnType<typeof stat>> | null, IoError> =>
+  Effect.tryPromise({
+    try: async () => {
+      try {
+        return await stat(filePath);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+          return null;
+        }
+        throw error;
+      }
+    },
+    catch: (cause) => new IoError({ operation: `stat ${filePath}`, cause }),
+  });
 
 const readJson = (filePath: string): Effect.Effect<unknown, IoError> =>
   Effect.tryPromise({
@@ -96,6 +129,21 @@ const writeText = (filePath: string, content: string): Effect.Effect<void, IoErr
     catch: (cause) => new IoError({ operation: `write ${filePath}`, cause }),
   });
 
+const writeNewText = (
+  filePath: string,
+  content: string,
+  projectDir: string,
+): Effect.Effect<void, IoError | ProjectExists> =>
+  Effect.tryPromise({
+    try: () => writeFile(filePath, content, { flag: "wx" }),
+    catch: (cause) => {
+      if ((cause as NodeJS.ErrnoException).code === "EEXIST") {
+        return new ProjectExists({ projectDir });
+      }
+      return new IoError({ operation: `write ${filePath}`, cause });
+    },
+  });
+
 function projectPaths(projectDir: string) {
   return {
     projectPath: path.join(projectDir, "project.json"),
@@ -103,6 +151,13 @@ function projectPaths(projectDir: string) {
     progressPath: path.join(projectDir, "progress.json"),
   };
 }
+
+const INIT_RELATIVE_PATHS = [
+  "project.json",
+  "plan.graph.json",
+  "progress.json",
+  path.join("nodes", "root.mdx"),
+] as const;
 
 const acquireProjectLock = (
   projectDir: string,
@@ -348,6 +403,140 @@ export const loadProjectDir = (
     }
     return yield* readProjectData(projectDir);
   });
+
+export const probeProjectDir = (
+  projectDir: string,
+): Effect.Effect<FolderProbe, IoError> =>
+  Effect.gen(function* () {
+    const resolved = path.resolve(projectDir);
+    const info = yield* statPath(resolved);
+    if (info === null) {
+      return { kind: "missing" as const };
+    }
+    if (!info.isDirectory()) {
+      return { kind: "not-a-directory" as const };
+    }
+
+    // Same files init refuses to overwrite: any one means this is not a blank init.
+    let hasInitFile = false;
+    for (const relative of INIT_RELATIVE_PATHS) {
+      const existing = yield* statPath(path.join(resolved, relative));
+      if (existing !== null) {
+        hasInitFile = true;
+        break;
+      }
+    }
+    if (!hasInitFile) {
+      return { kind: "uninitialized" as const };
+    }
+
+    const result = yield* validateProjectDir(resolved);
+    if (result.ok) {
+      return { kind: "ready" as const };
+    }
+    return { kind: "invalid" as const, issues: result.issues };
+  });
+
+export const initProjectDir = (
+  projectDir: string,
+): Effect.Effect<
+  ProjectData,
+  PathNotFound | NotADirectory | ProjectExists | LockTimeout | IoError
+> => {
+  const resolved = path.resolve(projectDir);
+
+  return Effect.gen(function* () {
+    const info = yield* statPath(resolved);
+    if (info === null) {
+      return yield* Effect.fail(new PathNotFound({ projectDir: resolved }));
+    }
+    if (!info.isDirectory()) {
+      return yield* Effect.fail(new NotADirectory({ projectDir: resolved }));
+    }
+
+    // Stat before locking: lock file lives inside the project directory.
+    return yield* withProjectLock(
+      resolved,
+      Effect.gen(function* () {
+        for (const relative of INIT_RELATIVE_PATHS) {
+          const existing = yield* statPath(path.join(resolved, relative));
+          if (existing !== null) {
+            return yield* Effect.fail(new ProjectExists({ projectDir: resolved }));
+          }
+        }
+
+        const name = path.basename(resolved) || "project";
+        const now = new Date().toISOString();
+        const { projectPath, graphPath, progressPath } = projectPaths(resolved);
+        const nodesDir = path.join(resolved, "nodes");
+        const rootNotePath = path.join(nodesDir, "root.mdx");
+        const created: string[] = [];
+        let createdNodesDir = false;
+
+        const nodesBefore = yield* statPath(nodesDir);
+        yield* Effect.tryPromise({
+          try: () => mkdir(nodesDir, { recursive: true }),
+          catch: (cause) => new IoError({ operation: `mkdir ${nodesDir}`, cause }),
+        });
+        createdNodesDir = nodesBefore === null;
+
+        const project = { version: 1 as const, name, createdAt: now };
+        const graph = {
+          version: 1 as const,
+          nodes: [{ id: "root", title: name }],
+          edges: [] as { from: string; to: string }[],
+        };
+        const progress = {
+          version: 1 as const,
+          entries: { root: { status: "learning" as const } },
+        };
+
+        const rollback = Effect.tryPromise({
+          try: async () => {
+            for (const filePath of [...created].reverse()) {
+              await unlink(filePath).catch(() => undefined);
+            }
+            if (createdNodesDir) {
+              await rmdir(nodesDir).catch(() => undefined);
+            }
+          },
+          catch: () => undefined,
+        }).pipe(Effect.ignore);
+
+        return yield* Effect.gen(function* () {
+          yield* writeNewText(
+            projectPath,
+            `${JSON.stringify(project, null, 2)}\n`,
+            resolved,
+          );
+          created.push(projectPath);
+          yield* writeNewText(
+            graphPath,
+            `${JSON.stringify(graph, null, 2)}\n`,
+            resolved,
+          );
+          created.push(graphPath);
+          yield* writeNewText(
+            progressPath,
+            `${JSON.stringify(progress, null, 2)}\n`,
+            resolved,
+          );
+          created.push(progressPath);
+          yield* writeNewText(
+            rootNotePath,
+            `# ${name}\n\nStart your notes here.\n`,
+            resolved,
+          );
+          created.push(rootNotePath);
+          return { project, graph, progress };
+        }).pipe(
+          // Leftover markers would make retry fail with ProjectExists.
+          Effect.tapError(() => rollback),
+        );
+      }),
+    );
+  });
+};
 
 export const readNodeContent = (
   projectDir: string,

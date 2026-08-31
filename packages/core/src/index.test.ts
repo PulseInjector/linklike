@@ -1,4 +1,12 @@
-import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -8,7 +16,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   addNode,
   deleteNode,
+  initProjectDir,
   loadProjectDir,
+  probeProjectDir,
   runCore,
   setProgress,
   writeNodeContent,
@@ -42,6 +52,199 @@ afterEach(async () => {
   );
 });
 
+describe("probeProjectDir", () => {
+  it("reports missing when the path does not exist", async () => {
+    const dir = path.join(tmpdir(), `linklike-core-probe-missing-${Date.now()}`);
+    await expect(runCore(probeProjectDir(dir))).resolves.toEqual({ kind: "missing" });
+  });
+
+  it("reports not-a-directory for a file path", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "linklike-core-probe-"));
+    dirs.push(dir);
+    const filePath = path.join(dir, "not-a-dir");
+    await writeFile(filePath, "x\n");
+    await expect(runCore(probeProjectDir(filePath))).resolves.toEqual({
+      kind: "not-a-directory",
+    });
+  });
+
+  it("reports uninitialized for an empty directory", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "linklike-core-probe-"));
+    dirs.push(dir);
+    await expect(runCore(probeProjectDir(dir))).resolves.toEqual({
+      kind: "uninitialized",
+    });
+  });
+
+  it("reports uninitialized when other files exist but none of the init files", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "linklike-core-probe-"));
+    dirs.push(dir);
+    await writeFile(path.join(dir, "readme.txt"), "keep me\n");
+    await expect(runCore(probeProjectDir(dir))).resolves.toEqual({
+      kind: "uninitialized",
+    });
+  });
+
+  it("reports ready for a valid project", async () => {
+    const dir = await makeProject();
+    await expect(runCore(probeProjectDir(dir))).resolves.toEqual({ kind: "ready" });
+  });
+
+  it("reports invalid when a root note exists without project files", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "linklike-core-probe-"));
+    dirs.push(dir);
+    await mkdir(path.join(dir, "nodes"), { recursive: true });
+    await writeFile(path.join(dir, "nodes", "root.mdx"), "KEEP THIS NOTE\n");
+    const result = await runCore(probeProjectDir(dir));
+    expect(result.kind).toBe("invalid");
+    if (result.kind === "invalid") {
+      expect(result.issues.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("reports invalid for corrupt JSON", async () => {
+    const dir = await makeProject();
+    await writeFile(path.join(dir, "project.json"), "{ not valid json\n");
+    const result = await runCore(probeProjectDir(dir));
+    expect(result.kind).toBe("invalid");
+  });
+});
+
+describe("initProjectDir", () => {
+  it("writes the same layout as CLI init into an empty directory", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "linklike-core-init-"));
+    dirs.push(dir);
+    const name = path.basename(dir);
+
+    const data = await runCore(initProjectDir(dir));
+    expect(data.project.name).toBe(name);
+    expect(data.project.version).toBe(1);
+    expect(data.graph.nodes).toEqual([{ id: "root", title: name }]);
+    expect(data.graph.edges).toEqual([]);
+    expect(data.progress.entries.root.status).toBe("learning");
+
+    expect(JSON.parse(await readFile(path.join(dir, "project.json"), "utf8"))).toEqual(
+      data.project,
+    );
+    expect(
+      JSON.parse(await readFile(path.join(dir, "plan.graph.json"), "utf8")),
+    ).toEqual(data.graph);
+    expect(JSON.parse(await readFile(path.join(dir, "progress.json"), "utf8"))).toEqual(
+      data.progress,
+    );
+    expect(await readFile(path.join(dir, "nodes", "root.mdx"), "utf8")).toBe(
+      `# ${name}\n\nStart your notes here.\n`,
+    );
+
+    const loaded = await runCore(loadProjectDir(dir));
+    expect(loaded.project.name).toBe(name);
+  });
+
+  it("allows a non-empty directory that has none of the three JSON files", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "linklike-core-init-"));
+    dirs.push(dir);
+    await writeFile(path.join(dir, "notes.txt"), "keep me\n");
+
+    await runCore(initProjectDir(dir));
+    expect(await readFile(path.join(dir, "notes.txt"), "utf8")).toBe("keep me\n");
+    expect(await readFile(path.join(dir, "project.json"), "utf8")).toContain(
+      path.basename(dir),
+    );
+  });
+
+  it("does not create a missing directory", async () => {
+    const dir = path.join(tmpdir(), `linklike-core-missing-${Date.now()}`);
+    await expect(runCore(initProjectDir(dir))).rejects.toMatchObject({
+      _tag: "PathNotFound",
+      projectDir: path.resolve(dir),
+    });
+    await expect(
+      readFile(path.join(dir, "project.json"), "utf8"),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("refuses a path that is not a directory", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "linklike-core-init-"));
+    dirs.push(dir);
+    const filePath = path.join(dir, "not-a-dir");
+    await writeFile(filePath, "x\n");
+    await expect(runCore(initProjectDir(filePath))).rejects.toMatchObject({
+      _tag: "NotADirectory",
+    });
+  });
+
+  it("does not overwrite when any of the three JSON files already exist", async () => {
+    const dir = await makeProject();
+    const projectBefore = await readFile(path.join(dir, "project.json"), "utf8");
+    const graphBefore = await readFile(path.join(dir, "plan.graph.json"), "utf8");
+    const progressBefore = await readFile(path.join(dir, "progress.json"), "utf8");
+
+    await expect(runCore(initProjectDir(dir))).rejects.toMatchObject({
+      _tag: "ProjectExists",
+    });
+    expect(await readFile(path.join(dir, "project.json"), "utf8")).toBe(projectBefore);
+    expect(await readFile(path.join(dir, "plan.graph.json"), "utf8")).toBe(graphBefore);
+    expect(await readFile(path.join(dir, "progress.json"), "utf8")).toBe(
+      progressBefore,
+    );
+  });
+
+  it("does not overwrite a corrupt project", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "linklike-core-init-"));
+    dirs.push(dir);
+    await writeFile(path.join(dir, "project.json"), "{ not valid json\n");
+    await writeFile(path.join(dir, "plan.graph.json"), "{ not valid json\n");
+    await writeFile(path.join(dir, "progress.json"), "{ not valid json\n");
+
+    await expect(runCore(initProjectDir(dir))).rejects.toMatchObject({
+      _tag: "ProjectExists",
+    });
+    expect(await readFile(path.join(dir, "project.json"), "utf8")).toBe(
+      "{ not valid json\n",
+    );
+  });
+
+  it("does not overwrite an existing root note", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "linklike-core-init-"));
+    dirs.push(dir);
+    await mkdir(path.join(dir, "nodes"), { recursive: true });
+    await writeFile(path.join(dir, "nodes", "root.mdx"), "KEEP THIS NOTE\n");
+
+    await expect(runCore(initProjectDir(dir))).rejects.toMatchObject({
+      _tag: "ProjectExists",
+    });
+    expect(await readFile(path.join(dir, "nodes", "root.mdx"), "utf8")).toBe(
+      "KEEP THIS NOTE\n",
+    );
+    await expect(
+      readFile(path.join(dir, "project.json"), "utf8"),
+    ).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+  });
+
+  it("removes files written this round when a later write fails", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "linklike-core-init-"));
+    dirs.push(dir);
+    // Dangling symlink: stat follows (ENOENT) so the conflict check passes; wx then hits EEXIST.
+    await symlink("/no/such/linklike-init-target", path.join(dir, "plan.graph.json"));
+
+    await expect(runCore(initProjectDir(dir))).rejects.toMatchObject({
+      _tag: "ProjectExists",
+    });
+    await expect(
+      readFile(path.join(dir, "project.json"), "utf8"),
+    ).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+    await expect(
+      readFile(path.join(dir, "progress.json"), "utf8"),
+    ).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+  });
+});
+
 describe("addNode", () => {
   it("appends a node, links the parent, and creates the stub", async () => {
     const dir = await makeProject();
@@ -61,6 +264,19 @@ describe("addNode", () => {
 
     const load = await runCore(loadProjectDir(dir));
     expect(load.project.name).toBe("t");
+  });
+
+  it("falls back to node when a title has no latin slug", async () => {
+    const dir = await makeProject();
+    const first = await runCore(addNode(dir, { title: "协议一", parent: "root" }));
+    const second = await runCore(addNode(dir, { title: "协议二", parent: "root" }));
+    expect(first.id).toBe("node");
+    expect(second.id).toBe("node-2");
+    const graph = planGraphSchema.parse(
+      JSON.parse(await readFile(path.join(dir, "plan.graph.json"), "utf8")),
+    );
+    expect(graph.nodes.map((item) => item.title)).toContain("协议一");
+    expect(graph.nodes.map((item) => item.title)).toContain("协议二");
   });
 
   it("deduplicates ids from the same title", async () => {

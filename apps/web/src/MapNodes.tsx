@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 
 export type MapNodeData = {
@@ -6,11 +8,9 @@ export type MapNodeData = {
   status: "none" | "learning" | "done" | "skip";
   canDelete: boolean;
   adding: boolean;
-  draftTitle: string;
   onAdd: () => void;
   onDelete: () => void;
-  onDraftChange: (value: string) => void;
-  onCommitAdd: () => void;
+  onCommitAdd: (title: string) => void;
   onCancelAdd: () => void;
   onOpenNotes: () => void;
 };
@@ -41,7 +41,22 @@ function stopCardEvent(event: { stopPropagation: () => void }) {
   event.stopPropagation();
 }
 
+export function isComposingKey(event: {
+  nativeEvent: { isComposing?: boolean; keyCode?: number };
+}): boolean {
+  // 229 is the IME composition key on some browsers when isComposing is still false.
+  return event.nativeEvent.isComposing === true || event.nativeEvent.keyCode === 229;
+}
+
 export function CardNode({ data, selected }: NodeProps<CardFlowNode>) {
+  const [draftTitle, setDraftTitle] = useState("");
+
+  useEffect(() => {
+    if (data.adding) {
+      setDraftTitle("");
+    }
+  }, [data.adding]);
+
   return (
     <div className="map-node-wrap">
       <div
@@ -52,23 +67,30 @@ export function CardNode({ data, selected }: NodeProps<CardFlowNode>) {
         onMouseDown={stopCardEvent}
         onClick={stopCardEvent}
         onDoubleClick={stopCardEvent}
+        onKeyDown={stopCardEvent}
+        onKeyUp={stopCardEvent}
       >
         {data.adding ? (
           <input
-            className="map-node-title-input"
+            className="map-node-title-input nokey nodrag nopan"
             aria-label="New node title"
-            value={data.draftTitle}
+            value={draftTitle}
             autoFocus
-            onChange={(event) => data.onDraftChange(event.target.value)}
+            onChange={(event) => setDraftTitle(event.target.value)}
             onKeyDown={(event) => {
+              event.stopPropagation();
+              if (isComposingKey(event)) {
+                return;
+              }
               if (event.key === "Enter") {
                 event.preventDefault();
-                data.onCommitAdd();
+                data.onCommitAdd(draftTitle);
               } else if (event.key === "Escape") {
                 event.preventDefault();
                 data.onCancelAdd();
               }
             }}
+            onKeyUp={stopCardEvent}
           />
         ) : (
           <>

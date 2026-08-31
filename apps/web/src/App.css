@@ -65,6 +65,25 @@ input {
   font-size: 1rem;
 }
 
+.path-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.path-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.home-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.home-actions button {
+  flex: 1;
+}
+
 button {
   padding: 0.6rem 0.9rem;
   border-radius: 8px;
@@ -109,6 +128,18 @@ button.secondary {
   padding-left: 1.1rem;
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.notice {
+  margin-top: 1.25rem;
+  padding: 0.9rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: rgba(43, 120, 228, 0.08);
+}
+
+.notice p {
+  margin: 0;
 }
 
 .project-error {

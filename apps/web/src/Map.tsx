@@ -83,7 +83,6 @@ export function Map({
   const laidOut = useMemo(() => layoutLearningMap(graph), [graph]);
   const graphId = useMemo(() => graph.nodes.map((node) => node.id).join("\0"), [graph]);
   const [addingForId, setAddingForId] = useState<string | null>(null);
-  const [draftTitle, setDraftTitle] = useState("");
   const committingAdd = useRef(false);
   const pendingClick = useRef<{
     id: string;
@@ -101,22 +100,19 @@ export function Map({
   useEffect(() => {
     if (addingForId && addingForId !== selectedId) {
       setAddingForId(null);
-      setDraftTitle("");
     }
   }, [selectedId, addingForId]);
 
   const cancelAdd = () => {
     setAddingForId(null);
-    setDraftTitle("");
   };
 
-  const commitAdd = async () => {
+  const commitAdd = async (parentId: string, rawTitle: string) => {
     if (committingAdd.current) {
       return;
     }
-    const title = draftTitle.trim();
-    const parentId = addingForId;
-    if (!parentId || !title) {
+    const title = rawTitle.trim();
+    if (!title) {
       cancelAdd();
       return;
     }
@@ -167,17 +163,14 @@ export function Map({
         status: statusOf(progress, node.id),
         canDelete: subtreeNodeIds(graph, node.id).size < graph.nodes.length,
         adding: addingForId === node.id,
-        draftTitle: addingForId === node.id ? draftTitle : "",
         onAdd: () => {
           setAddingForId(node.id);
-          setDraftTitle("");
         },
         onDelete: () => {
           void requestDelete(node.id).catch(() => undefined);
         },
-        onDraftChange: setDraftTitle,
-        onCommitAdd: () => {
-          void commitAdd().catch(() => undefined);
+        onCommitAdd: (title: string) => {
+          void commitAdd(node.id, title).catch(() => undefined);
         },
         onCancelAdd: cancelAdd,
         onOpenNotes: () => onOpenNotes(node.id),
@@ -189,17 +182,7 @@ export function Map({
     }));
 
     return [...frames, ...cards];
-  }, [
-    laidOut,
-    progress,
-    selectedId,
-    addingForId,
-    draftTitle,
-    onAdd,
-    onDelete,
-    onOpenNotes,
-    graph,
-  ]);
+  }, [laidOut, progress, selectedId, addingForId, onAdd, onDelete, onOpenNotes, graph]);
 
   const edges = useMemo<Edge[]>(() => {
     const byId = Object.fromEntries(laidOut.nodes.map((node) => [node.id, node]));
@@ -298,6 +281,7 @@ export function Map({
       edgesFocusable={false}
       elementsSelectable
       deleteKeyCode={null}
+      panActivationKeyCode={addingForId ? null : "Space"}
       minZoom={MIN_ZOOM}
       maxZoom={MAX_ZOOM}
       panOnScroll

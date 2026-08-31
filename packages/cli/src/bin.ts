@@ -1,9 +1,10 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import {
   addNode,
   deleteNode,
+  initProjectDir,
   isLinklikeError,
   linklikeErrorMessage,
   runCore,
@@ -50,43 +51,6 @@ async function readStdin(): Promise<string> {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-async function initProject(targetDir: string): Promise<void> {
-  await mkdir(path.join(targetDir, "nodes"), { recursive: true });
-
-  const now = new Date().toISOString();
-  const name = path.basename(targetDir);
-
-  await writeFile(
-    path.join(targetDir, "project.json"),
-    `${JSON.stringify({ version: 1, name, createdAt: now }, null, 2)}\n`,
-  );
-
-  await writeFile(
-    path.join(targetDir, "plan.graph.json"),
-    `${JSON.stringify(
-      {
-        version: 1,
-        nodes: [{ id: "root", title: name }],
-        edges: [],
-      },
-      null,
-      2,
-    )}\n`,
-  );
-
-  await writeFile(
-    path.join(targetDir, "progress.json"),
-    `${JSON.stringify({ version: 1, entries: { root: { status: "learning" } } }, null, 2)}\n`,
-  );
-
-  await writeFile(
-    path.join(targetDir, "nodes", "root.mdx"),
-    `# ${name}\n\nStart your notes here.\n`,
-  );
-
-  console.log(`Created project at ${targetDir}`);
-}
-
 async function main(): Promise<void> {
   const [, , command, ...rest] = process.argv;
 
@@ -100,7 +64,11 @@ async function main(): Promise<void> {
     if (!target) {
       throw new Error("init requires a directory path");
     }
-    await initProject(path.resolve(target));
+    const resolved = path.resolve(target);
+    // Core refuses a missing path so the browser cannot mkdir; CLI still creates it.
+    await mkdir(resolved, { recursive: true });
+    await runCore(initProjectDir(resolved));
+    console.log(`Created project at ${resolved}`);
     return;
   }
 

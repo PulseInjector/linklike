@@ -40,6 +40,18 @@ export class IoError extends Data.TaggedError("IoError")<{
   readonly cause: unknown;
 }> {}
 
+export class PathNotFound extends Data.TaggedError("PathNotFound")<{
+  readonly projectDir: string;
+}> {}
+
+export class NotADirectory extends Data.TaggedError("NotADirectory")<{
+  readonly projectDir: string;
+}> {}
+
+export class ProjectExists extends Data.TaggedError("ProjectExists")<{
+  readonly projectDir: string;
+}> {}
+
 export type LinklikeError =
   | InvalidProject
   | InvalidNodeId
@@ -50,7 +62,10 @@ export type LinklikeError =
   | LastNode
   | GraphIntegrityError
   | LockTimeout
-  | IoError;
+  | IoError
+  | PathNotFound
+  | NotADirectory
+  | ProjectExists;
 
 export function linklikeErrorMessage(error: LinklikeError): string {
   switch (error._tag) {
@@ -74,6 +89,12 @@ export function linklikeErrorMessage(error: LinklikeError): string {
       return `timed out acquiring project lock for ${error.projectDir}`;
     case "IoError":
       return `io error during ${error.operation}: ${String(error.cause)}`;
+    case "PathNotFound":
+      return `directory does not exist: ${error.projectDir}`;
+    case "NotADirectory":
+      return `path is not a directory: ${error.projectDir}`;
+    case "ProjectExists":
+      return `directory already contains a Linklike project: ${error.projectDir}`;
   }
 }
 
