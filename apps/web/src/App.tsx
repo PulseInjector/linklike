@@ -277,24 +277,25 @@ export function App() {
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     const trimmed = inputPath.trim();
-    if (!trimmed) {
+    if (!trimmed || loading || picking) {
       return;
     }
     const gen = ++probeGen.current;
+    // Disable Open until this probe settles so a retry cannot overlap it.
+    setLoading(true);
     const latest = await runProbe(trimmed, gen);
+    if (gen !== probeGen.current) {
+      return;
+    }
     if (latest?.kind === "uninitialized") {
       await doInit(trimmed);
       return;
     }
-    if (latest?.kind === "missing" || latest?.kind === "not-a-directory") {
-      return;
-    }
-    if (latest?.kind === "invalid") {
-      return;
-    }
     if (latest?.kind === "ready") {
       openPath(trimmed);
+      return;
     }
+    setLoading(false);
   };
 
   const onBrowse = async () => {
@@ -326,6 +327,7 @@ export function App() {
   const onPathChange = (value: string) => {
     setInputPath(value);
     probeGen.current += 1;
+    setLoading(false);
     setProbe(null);
     setError(null);
     setIssues([]);
