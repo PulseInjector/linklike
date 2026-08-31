@@ -51,6 +51,7 @@ import type {
   DeleteNodeResult,
   FolderProbe,
   ProjectData,
+  RenameNodeResult,
   ValidationIssue,
   ValidationResult,
 } from "./types.js";
@@ -61,6 +62,7 @@ export type {
   DeleteNodeResult,
   FolderProbe,
   ProjectData,
+  RenameNodeResult,
   ValidationIssue,
   ValidationResult,
 } from "./types.js";
@@ -693,6 +695,64 @@ export const addNode = (
       yield* writeText(graphPath, `${JSON.stringify(validated, null, 2)}\n`);
 
       return { id, graph: validated, nodeFileCreated };
+    }),
+  );
+};
+
+export const renameNode = (
+  projectDir: string,
+  nodeId: string,
+  rawTitle: string,
+): Effect.Effect<
+  RenameNodeResult,
+  | EmptyTitle
+  | InvalidNodeId
+  | UnknownNode
+  | InvalidProject
+  | GraphIntegrityError
+  | LockTimeout
+  | IoError
+> => {
+  const title = rawTitle.trim();
+  if (!title) {
+    return Effect.fail(new EmptyTitle());
+  }
+  if (!SAFE_NODE_ID.test(nodeId)) {
+    return Effect.fail(new InvalidNodeId({ nodeId }));
+  }
+
+  return withProjectLock(
+    projectDir,
+    Effect.gen(function* () {
+      const existingProject = yield* validateProjectDir(projectDir);
+      if (!existingProject.ok) {
+        return yield* Effect.fail(
+          new InvalidProject({ issues: existingProject.issues }),
+        );
+      }
+
+      const { graphPath } = projectPaths(projectDir);
+      const graph = planGraphSchema.parse(yield* readJson(graphPath));
+      if (!graph.nodes.some((node) => node.id === nodeId)) {
+        return yield* Effect.fail(new UnknownNode({ nodeId }));
+      }
+
+      const nextGraph: PlanGraph = {
+        ...graph,
+        nodes: graph.nodes.map((node) =>
+          node.id === nodeId ? { ...node, title } : node,
+        ),
+      };
+      const validated = planGraphSchema.parse(nextGraph);
+      const integrityErrors = validateGraphIntegrity(validated);
+      if (integrityErrors.length > 0) {
+        return yield* Effect.fail(
+          new GraphIntegrityError({ messages: integrityErrors }),
+        );
+      }
+
+      yield* writeText(graphPath, `${JSON.stringify(validated, null, 2)}\n`);
+      return { id: nodeId, graph: validated };
     }),
   );
 };

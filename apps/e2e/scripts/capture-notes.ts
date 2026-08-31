@@ -16,7 +16,7 @@ function sampleHtml(css: string): string {
     <meta charset="utf-8" />
     <style>
 ${css}
-body { margin: 0; background: #0a0b0d; }
+body { margin: 0; background: #ffffff; }
 .notes-document { padding: 32px 40px 48px; }
 .notes-document h1, .notes-document h2, .notes-document p,
 .notes-document ul, .notes-document pre { margin-inline: 0; width: auto; max-width: 720px; }

@@ -8,6 +8,7 @@ import {
   edgeHandles,
   layoutLearningMap,
   nodeHeight,
+  rootIds,
   type LaidOutNode,
 } from "./layout";
 
@@ -46,6 +47,11 @@ describe("layoutLearningMap", () => {
       ["basics", "scala"],
     ],
   );
+
+  it("treats nodes with no parent as roots", () => {
+    expect(rootIds(sample)).toEqual(["root"]);
+    expect(rootIds(graph([{ id: "only", title: "Only" }], []))).toEqual(["only"]);
+  });
 
   it("grows estimated height when a title wraps", () => {
     const oneLine = nodeHeight("Python", 180, "subtopic");

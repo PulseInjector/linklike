@@ -1,17 +1,21 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 
 export type MapNodeData = {
   label: string;
   kind: "topic" | "subtopic";
+  isRoot: boolean;
   status: "none" | "learning" | "done" | "skip";
   canDelete: boolean;
   adding: boolean;
+  renaming: boolean;
   onAdd: () => void;
+  onRename: () => void;
   onDelete: () => void;
   onCommitAdd: (title: string) => void;
-  onCancelAdd: () => void;
+  onCommitRename: (title: string) => void;
+  onCancelEdit: () => void;
   onOpenNotes: () => void;
 };
 
@@ -21,7 +25,8 @@ export type SectionFlowNode = Node<Record<string, never>, "section">;
 function cardClass(data: MapNodeData, selected: boolean): string {
   const status = data.status === "none" ? "" : ` is-${data.status}`;
   const selectedClass = selected ? " is-selected" : "";
-  return `map-node map-node--${data.kind}${status}${selectedClass}`;
+  const rootClass = data.isRoot ? " map-node--root" : "";
+  return `map-node map-node--${data.kind}${rootClass}${status}${selectedClass}`;
 }
 
 function Handles() {
@@ -52,12 +57,16 @@ export function isComposingKey(event: {
 
 export function CardNode({ data, selected }: NodeProps<CardFlowNode>) {
   const [draftTitle, setDraftTitle] = useState("");
-
-  useEffect(() => {
-    if (data.adding) {
+  const editKind = data.adding ? "add" : data.renaming ? "rename" : "idle";
+  const [draftKind, setDraftKind] = useState<"idle" | "add" | "rename">("idle");
+  if (editKind !== draftKind) {
+    setDraftKind(editKind);
+    if (editKind === "add") {
       setDraftTitle("");
+    } else if (editKind === "rename") {
+      setDraftTitle(data.label);
     }
-  }, [data.adding]);
+  }
 
   return (
     <div className="map-node-wrap">
@@ -89,7 +98,7 @@ export function CardNode({ data, selected }: NodeProps<CardFlowNode>) {
                 data.onCommitAdd(draftTitle);
               } else if (event.key === "Escape") {
                 event.preventDefault();
-                data.onCancelAdd();
+                data.onCancelEdit();
               }
             }}
             onKeyUp={stopCardEvent}
@@ -98,6 +107,9 @@ export function CardNode({ data, selected }: NodeProps<CardFlowNode>) {
           <>
             <button type="button" onClick={data.onAdd}>
               Add
+            </button>
+            <button type="button" onClick={data.onRename}>
+              Rename
             </button>
             {data.canDelete && (
               <button type="button" onClick={data.onDelete}>
@@ -111,10 +123,41 @@ export function CardNode({ data, selected }: NodeProps<CardFlowNode>) {
         className={cardClass(data, selected)}
         onDoubleClick={(event) => {
           event.stopPropagation();
+          if (data.renaming) {
+            return;
+          }
           data.onOpenNotes();
         }}
       >
-        {data.label}
+        {data.renaming ? (
+          <input
+            className="map-node-title-input nokey nodrag nopan"
+            aria-label="Node title"
+            value={draftTitle}
+            autoFocus
+            onMouseDown={stopCardEvent}
+            onClick={stopCardEvent}
+            onDoubleClick={stopCardEvent}
+            onChange={(event) => setDraftTitle(event.target.value)}
+            onFocus={(event) => event.currentTarget.select()}
+            onKeyDown={(event) => {
+              event.stopPropagation();
+              if (isComposingKey(event)) {
+                return;
+              }
+              if (event.key === "Enter") {
+                event.preventDefault();
+                data.onCommitRename(draftTitle);
+              } else if (event.key === "Escape") {
+                event.preventDefault();
+                data.onCancelEdit();
+              }
+            }}
+            onKeyUp={stopCardEvent}
+          />
+        ) : (
+          data.label
+        )}
       </div>
       <Handles />
     </div>

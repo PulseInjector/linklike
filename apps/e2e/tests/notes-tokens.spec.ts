@@ -68,4 +68,10 @@ test("notes tokens match the pinned review-document body rules", async ({ page }
   for (const name of ["h1", "h2", "paragraph", "list", "code"]) {
     await access(path.join(notesDir, "screenshots", `${name}.png`));
   }
+
+  expect(tokens.source.selectors).toContain(".review-app--theme-light");
+  expect(tokens.color.background).not.toBe("#0a0b0d");
+  expect(tokens.color.ink).not.toBe("#e8eaee");
+  const readme = await readFile(path.join(notesDir, "README.md"), "utf8");
+  expect(readme).toContain(".review-app--theme-light");
 });

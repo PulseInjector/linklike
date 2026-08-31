@@ -10,6 +10,7 @@ import {
   initProject,
   pickDirectory,
   probeProject,
+  renameNode,
   type FolderProbe,
   type ProjectData,
 } from "./api";
@@ -356,7 +357,7 @@ export function App() {
     setData((prev) => (prev ? { ...prev, progress } : prev));
   };
 
-  const onNodeAdded = (graph: ProjectData["graph"]) => {
+  const onGraphUpdated = (graph: ProjectData["graph"]) => {
     graphGen.current += 1;
     setError(null);
     setIssues([]);
@@ -401,7 +402,7 @@ export function App() {
         }}
         onCloseDrawer={() => setDrawerId(null)}
         onProgressUpdated={onProgressUpdated}
-        onNodeAdded={onNodeAdded}
+        onGraphUpdated={onGraphUpdated}
         onNodeDeleted={onNodeDeleted}
         onMapError={(message) => {
           setError(message);
@@ -503,7 +504,7 @@ function ProjectView({
   onOpenNotes,
   onCloseDrawer,
   onProgressUpdated,
-  onNodeAdded,
+  onGraphUpdated,
   onNodeDeleted,
   onMapError,
   onOpenAnother,
@@ -520,7 +521,7 @@ function ProjectView({
   onOpenNotes: (nodeId: string) => void;
   onCloseDrawer: () => void;
   onProgressUpdated: (progress: Progress) => void;
-  onNodeAdded: (graph: ProjectData["graph"]) => void;
+  onGraphUpdated: (graph: ProjectData["graph"]) => void;
   onNodeDeleted: (
     graph: ProjectData["graph"],
     progress: Progress,
@@ -542,13 +543,26 @@ function ProjectView({
     async (parentId: string, title: string) => {
       try {
         const result = await createNode(path, title, parentId);
-        onNodeAdded(result.graph);
+        onGraphUpdated(result.graph);
       } catch (err) {
         onMapError(err instanceof ApiError ? err.message : String(err));
         throw err;
       }
     },
-    [path, onNodeAdded, onMapError],
+    [path, onGraphUpdated, onMapError],
+  );
+
+  const rename = useCallback(
+    async (nodeId: string, title: string) => {
+      try {
+        const result = await renameNode(path, nodeId, title);
+        onGraphUpdated(result.graph);
+      } catch (err) {
+        onMapError(err instanceof ApiError ? err.message : String(err));
+        throw err;
+      }
+    },
+    [path, onGraphUpdated, onMapError],
   );
 
   const removeNode = useCallback(
@@ -602,6 +616,7 @@ function ProjectView({
             onSelect={onSelect}
             onOpenNotes={onOpenNotes}
             onAdd={addChild}
+            onRename={rename}
             onDelete={removeNode}
           />
         </div>

@@ -118,6 +118,22 @@ export async function createNode(
   };
 }
 
+export async function renameNode(
+  path: string,
+  nodeId: string,
+  title: string,
+): Promise<{ id: string; graph: PlanGraph }> {
+  const res = await fetch(`/api/project/nodes/${encodeURIComponent(nodeId)}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ path, title }),
+  });
+  if (!res.ok) {
+    throw await parseError(res);
+  }
+  return (await res.json()) as { id: string; graph: PlanGraph };
+}
+
 export async function deleteNode(
   path: string,
   nodeId: string,
