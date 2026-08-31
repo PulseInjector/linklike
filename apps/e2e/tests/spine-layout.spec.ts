@@ -114,6 +114,30 @@ test("adding a child under a leaf keeps the former leaf off the spine", async ({
   ).toBeGreaterThan(40);
 });
 
+test("a nested parent-child chain steps outboard instead of stacking", async ({
+  page,
+}) => {
+  const projectDir = await copySpineProject();
+  await addNodeViaCli(projectDir, "9999", "what-is-data-engineering");
+  await addNodeViaCli(projectDir, "000", "9999");
+  await openProject(page, projectDir);
+
+  const what = mapNode(page, "What is Data Engineering?");
+  const nested = mapNode(page, "9999");
+  const child = mapNode(page, "000");
+  await expect(nested).toBeVisible();
+  await expect(child).toBeVisible();
+
+  const whatBox = await what.boundingBox();
+  const nestedBox = await nested.boundingBox();
+  const childBox = await child.boundingBox();
+  expect(whatBox).toBeTruthy();
+  expect(nestedBox).toBeTruthy();
+  expect(childBox).toBeTruthy();
+  expect(Math.abs(whatBox!.x - nestedBox!.x)).toBeGreaterThan(40);
+  expect(childBox!.y).toBeGreaterThan(nestedBox!.y);
+});
+
 test("minimal-project nests workloads beside kubernetes-overview", async ({ page }) => {
   const projectDir = await copyMinimalProject();
   await openProject(page, projectDir);

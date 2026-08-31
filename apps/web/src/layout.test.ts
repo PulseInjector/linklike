@@ -191,9 +191,7 @@ describe("layoutLearningMap deep trees", () => {
   it("nests deeper topics beside their parent instead of flattening onto the spine", () => {
     const placed = byId(layoutLearningMap(chain).nodes);
     expectOffsetX(placed.l1, placed.l2);
-    expect(placed.l3.position.y).toBeGreaterThan(
-      placed.l2.position.y + placed.l2.height / 2,
-    );
+    expectOffsetX(placed.l2, placed.l3);
     expect(placed.l4.position.y).toBeGreaterThan(
       placed.l3.position.y + placed.l3.height / 2,
     );
@@ -245,9 +243,9 @@ describe("layoutLearningMap deep trees", () => {
     expect(after.grand.position.y).toBeGreaterThan(after.child.position.y);
   });
 
-  it("draws a section around a nested topic's children", () => {
+  it("draws a section around a nested topic's leaves", () => {
     const { sections } = layoutLearningMap(chain);
-    expect(sections.some((section) => section.parentId === "l2")).toBe(true);
+    expect(sections.some((section) => section.parentId === "l3")).toBe(true);
   });
 });
 
@@ -409,5 +407,80 @@ describe("edgeHandles", () => {
       sourceHandle: "source-bottom",
       targetHandle: "target-top",
     });
+  });
+});
+
+describe("internal hierarchy (screenshot: 你好 / 111 / 222 / 9999 / 000 / 33)", () => {
+  const titles = [
+    { id: "root", title: "Root" },
+    { id: "nihao", title: "你好" },
+    { id: "n111", title: "111" },
+    { id: "n222", title: "222" },
+    { id: "n9999", title: "9999" },
+    { id: "n000", title: "000" },
+    { id: "n33", title: "33" },
+  ];
+
+  const asSiblingsUnder111 = graph(titles, [
+    ["root", "nihao"],
+    ["nihao", "n111"],
+    ["n111", "n222"],
+    ["n111", "n9999"],
+    ["n111", "n000"],
+    ["n111", "n33"],
+  ]);
+
+  const asChain = graph(titles, [
+    ["root", "nihao"],
+    ["nihao", "n111"],
+    ["n111", "n222"],
+    ["n222", "n9999"],
+    ["n9999", "n000"],
+    ["n000", "n33"],
+  ]);
+
+  it("keeps sibling leaves as subtopics in one section without mixing in their grandparent", () => {
+    const placed = byId(layoutLearningMap(asSiblingsUnder111).nodes);
+    expect(placed.n9999.kind).toBe("subtopic");
+    expect(placed.n000.kind).toBe("subtopic");
+    expect(placed.n111.kind).toBe("topic");
+    expectOffsetX(placed.nihao, placed.n111);
+    expectOffsetX(placed.nihao, placed.n9999);
+    expect(Math.abs(spineMidX(placed.n9999) - spineMidX(placed.n000))).toBeLessThan(40);
+  });
+
+  it("does not stack a parent-child chain of nested topics in one column", () => {
+    const placed = byId(layoutLearningMap(asChain).nodes);
+    expect(placed.n222.kind).toBe("topic");
+    expect(placed.n9999.kind).toBe("topic");
+    expect(placed.n000.kind).toBe("topic");
+    expect(placed.n33.kind).toBe("subtopic");
+    expectOffsetX(placed.n111, placed.n222);
+    expectOffsetX(placed.n222, placed.n9999);
+    expectOffsetX(placed.n9999, placed.n000);
+    expect(placed.n33.position.y).toBeGreaterThan(
+      placed.n000.position.y + placed.n000.height / 2,
+    );
+  });
+
+  it("moves a nested topic outboard of sibling leaves after it gains a child", () => {
+    const withNested = graph(titles, [
+      ["root", "nihao"],
+      ["nihao", "n111"],
+      ["n111", "n222"],
+      ["n111", "n9999"],
+      ["n111", "n000"],
+      ["n9999", "n33"],
+    ]);
+    const placed = byId(layoutLearningMap(withNested).nodes);
+    expect(placed.n222.kind).toBe("subtopic");
+    expect(placed.n000.kind).toBe("subtopic");
+    expect(placed.n9999.kind).toBe("topic");
+    expect(placed.n33.kind).toBe("subtopic");
+    const leafRight = Math.max(
+      placed.n222.position.x + placed.n222.width,
+      placed.n000.position.x + placed.n000.width,
+    );
+    expect(placed.n9999.position.x).toBeGreaterThan(leafRight - 8);
   });
 });

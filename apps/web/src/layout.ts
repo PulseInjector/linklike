@@ -301,48 +301,75 @@ export function layoutLearningMap(graph: PlanGraph): LayoutResult {
 
     const topicWidth = nodeWidth(title, "topic");
     const topicHeight = nodeHeight(title, topicWidth, "topic");
-    const childBlocks = kids
+    const gapY = tokens.layout.subtopicGapY;
+    const leafKids = kids.filter((kid) => (children.get(kid)?.length ?? 0) === 0);
+    const nestedKids = kids.filter((kid) => (children.get(kid)?.length ?? 0) > 0);
+    const leafBlocks = leafKids
       .map((kid) => layoutFanBlock(kid, side))
       .filter((block) => block.nodes.length > 0);
-    const stackWidth = childBlocks.reduce(
+    const nestedBlocks = nestedKids
+      .map((kid) => layoutFanBlock(kid, side))
+      .filter((block) => block.nodes.length > 0);
+    const leafColW = leafBlocks.reduce((max, block) => Math.max(max, block.width), 0);
+    const nestedColW = nestedBlocks.reduce(
       (max, block) => Math.max(max, block.width),
       0,
     );
-    const blockWidth = Math.max(topicWidth, stackWidth);
+    const innerW = Math.max(topicWidth, leafColW);
+    // Nested topics sit outboard of this card, like Column / Document beside NoSQL on the reference map.
+    const gapX = nestedBlocks.length > 0 ? tokens.layout.fanGapX : 0;
+    const innerX = side === "right" ? 0 : nestedColW + gapX;
+    const nestedX = side === "right" ? innerW + gapX : 0;
+
     const topic: LaidOutNode = {
       id,
       title,
       kind: "topic",
       side,
       position: {
-        x: side === "right" ? 0 : blockWidth - topicWidth,
+        x: side === "right" ? innerX : innerX + innerW - topicWidth,
         y: 0,
       },
       width: topicWidth,
       height: topicHeight,
     };
 
-    const nestedNodes: LaidOutNode[] = [];
-    const nestedSections: SectionFrame[] = [];
-    let childY = topicHeight + tokens.layout.subtopicGapY;
-    for (let index = 0; index < childBlocks.length; index += 1) {
-      const child = childBlocks[index]!;
-      const childX = side === "right" ? 0 : blockWidth - child.width;
-      const shifted = translateBlock(child, childX, childY);
-      nestedNodes.push(...shifted.nodes);
-      nestedSections.push(...shifted.sections);
-      childY += child.height;
-      if (index < childBlocks.length - 1) {
-        childY += tokens.layout.subtopicGapY;
+    const nodes: LaidOutNode[] = [topic];
+    const frames: SectionFrame[] = [];
+    let leafY = topicHeight + gapY;
+    for (let index = 0; index < leafBlocks.length; index += 1) {
+      const leaf = leafBlocks[index]!;
+      const leafX = side === "right" ? innerX : innerX + innerW - leaf.width;
+      const shifted = translateBlock(leaf, leafX, leafY);
+      nodes.push(...shifted.nodes);
+      frames.push(...shifted.sections);
+      leafY += leaf.height;
+      if (index < leafBlocks.length - 1) {
+        leafY += gapY;
       }
     }
 
-    const frame = nestedNodes.length > 0 ? nestedSection(id, topic, nestedNodes) : null;
-    visiting.delete(id);
-    return normalizeBlock(
-      [topic, ...nestedNodes],
-      frame ? [...nestedSections, frame] : nestedSections,
+    let nestY = 0;
+    for (let index = 0; index < nestedBlocks.length; index += 1) {
+      const nested = nestedBlocks[index]!;
+      const blockX = side === "right" ? nestedX : nestedX + nestedColW - nested.width;
+      const shifted = translateBlock(nested, blockX, nestY);
+      nodes.push(...shifted.nodes);
+      frames.push(...shifted.sections);
+      nestY += nested.height;
+      if (index < nestedBlocks.length - 1) {
+        nestY += gapY;
+      }
+    }
+
+    const leafCards = nodes.filter(
+      (node) => leafKids.includes(node.id) && node.kind === "subtopic",
     );
+    if (leafCards.length > 0) {
+      frames.push(nestedSection(id, topic, leafCards));
+    }
+    visiting.delete(id);
+    return normalizeBlock(nodes, frames);
   };
 
   const commitBlock = (block: Block, dx: number, dy: number): void => {
