@@ -185,10 +185,13 @@ export function Map({
   }, [laidOut, progress, selectedId, addingForId, onAdd, onDelete, onOpenNotes, graph]);
 
   const edges = useMemo<Edge[]>(() => {
-    const byId = Object.fromEntries(laidOut.nodes.map((node) => [node.id, node]));
+    // This file's Map component shadows the constructor; Map.get skips prototype keys.
+    const byId = new globalThis.Map(
+      laidOut.nodes.map((node) => [node.id, node] as const),
+    );
     return graph.edges.map((edge, index) => {
-      const source = byId[edge.from];
-      const target = byId[edge.to];
+      const source = byId.get(edge.from);
+      const target = byId.get(edge.to);
       const dashed = target?.kind === "subtopic";
       const handles =
         source && target

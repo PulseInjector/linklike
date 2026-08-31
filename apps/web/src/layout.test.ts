@@ -408,6 +408,79 @@ describe("edgeHandles", () => {
       targetHandle: "target-top",
     });
   });
+
+  it("uses vertical handles when a wide parent stacks a narrow child in the same column", () => {
+    const source = {
+      id: "what",
+      title: "What is Data Engineering?",
+      kind: "topic" as const,
+      side: "right" as const,
+      position: { x: 595, y: 317.5 },
+      width: 315,
+      height: 49,
+    };
+    const target = {
+      id: "leaf",
+      title: "9999",
+      kind: "subtopic" as const,
+      side: "right" as const,
+      position: { x: 595, y: 378.5 },
+      width: 140,
+      height: 49,
+    };
+    expect(edgeHandles(source, target)).toEqual({
+      sourceHandle: "source-bottom",
+      targetHandle: "target-top",
+    });
+  });
+
+  it("uses side handles when a fan leaf sits beside the parent even if it is far above", () => {
+    const source = {
+      id: "topic",
+      title: "Topic",
+      kind: "topic" as const,
+      side: "spine" as const,
+      position: { x: 200, y: 300 },
+      width: 180,
+      height: 50,
+    };
+    const target = {
+      id: "leaf",
+      title: "L0",
+      kind: "subtopic" as const,
+      side: "right" as const,
+      position: { x: 436, y: 56 },
+      width: 140,
+      height: 49,
+    };
+    expect(edgeHandles(source, target)).toEqual({
+      sourceHandle: "source-right",
+      targetHandle: "target-left",
+    });
+  });
+
+  it("uses vertical handles after layout stacks a long nested topic over a short leaf", () => {
+    const { nodes } = layoutLearningMap(
+      graph(
+        [
+          { id: "root", title: "Root" },
+          { id: "topic", title: "Introduction" },
+          { id: "what", title: "What is Data Engineering?" },
+          { id: "leaf", title: "9999" },
+        ],
+        [
+          ["root", "topic"],
+          ["topic", "what"],
+          ["what", "leaf"],
+        ],
+      ),
+    );
+    const placed = byId(nodes);
+    expect(edgeHandles(placed.what, placed.leaf)).toEqual({
+      sourceHandle: "source-bottom",
+      targetHandle: "target-top",
+    });
+  });
 });
 
 describe("internal hierarchy (screenshot: 你好 / 111 / 222 / 9999 / 000 / 33)", () => {

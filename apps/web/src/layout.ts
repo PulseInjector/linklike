@@ -231,20 +231,25 @@ export function edgeHandles(
   source: LaidOutNode,
   target: LaidOutNode,
 ): { sourceHandle: string; targetHandle: string } {
-  const dx =
-    target.position.x + target.width / 2 - (source.position.x + source.width / 2);
-  const dy =
-    target.position.y + target.height / 2 - (source.position.y + source.height / 2);
-  if (Math.abs(dx) >= Math.abs(dy)) {
-    if (dx < 0) {
-      return { sourceHandle: "source-left", targetHandle: "target-right" };
+  // Centers of a wide parent and a narrow child can sit farther apart horizontally
+  // than vertically even when the boxes share a column; overlap decides the axis.
+  const overlapX =
+    Math.min(source.position.x + source.width, target.position.x + target.width) -
+    Math.max(source.position.x, target.position.x);
+  const sourceCy = source.position.y + source.height / 2;
+  const targetCy = target.position.y + target.height / 2;
+  if (overlapX > 0) {
+    if (targetCy < sourceCy) {
+      return { sourceHandle: "source-top", targetHandle: "target-bottom" };
     }
-    return { sourceHandle: "source-right", targetHandle: "target-left" };
+    return { sourceHandle: "source-bottom", targetHandle: "target-top" };
   }
-  if (dy < 0) {
-    return { sourceHandle: "source-top", targetHandle: "target-bottom" };
+  const sourceCx = source.position.x + source.width / 2;
+  const targetCx = target.position.x + target.width / 2;
+  if (targetCx < sourceCx) {
+    return { sourceHandle: "source-left", targetHandle: "target-right" };
   }
-  return { sourceHandle: "source-bottom", targetHandle: "target-top" };
+  return { sourceHandle: "source-right", targetHandle: "target-left" };
 }
 
 // Only the root and its topic children stay on the spine; deeper topics nest in the fan.
