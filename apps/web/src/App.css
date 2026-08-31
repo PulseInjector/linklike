@@ -130,6 +130,18 @@ button.secondary {
   font-size: 0.9rem;
 }
 
+.notice {
+  margin-top: 1.25rem;
+  padding: 0.9rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: rgba(43, 120, 228, 0.08);
+}
+
+.notice p {
+  margin: 0;
+}
+
 .project-error {
   margin: 0;
   border-radius: 0;

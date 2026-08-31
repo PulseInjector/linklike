@@ -38,6 +38,29 @@ describe("api", () => {
     expect(res.status).toBe(400);
   });
 
+  it("probes folder kind without treating an empty directory as invalid", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "linklike-api-probe-"));
+    tempDirs.push(dir);
+    const res = await app.request(`/project/probe?path=${encodeURIComponent(dir)}`);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ kind: "uninitialized" });
+  });
+
+  it("probes a valid directory as ready", async () => {
+    const res = await app.request(
+      `/project/probe?path=${encodeURIComponent(fixtureDir)}`,
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ kind: "ready" });
+  });
+
+  it("probes a missing path as missing", async () => {
+    const dir = path.join(tmpdir(), `linklike-api-probe-missing-${Date.now()}`);
+    const res = await app.request(`/project/probe?path=${encodeURIComponent(dir)}`);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ kind: "missing" });
+  });
+
   it("returns project data for a valid directory", async () => {
     const res = await app.request(`/project?path=${encodeURIComponent(fixtureDir)}`);
     expect(res.status).toBe(200);

@@ -10,6 +10,13 @@ export interface ValidationResult {
   issues: ValidationIssue[];
 }
 
+export type FolderProbe =
+  | { kind: "missing" }
+  | { kind: "not-a-directory" }
+  | { kind: "uninitialized" }
+  | { kind: "ready" }
+  | { kind: "invalid"; issues: ValidationIssue[] };
+
 export interface ProjectData {
   project: Project;
   graph: PlanGraph;

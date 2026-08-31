@@ -9,6 +9,8 @@ import {
   fetchProject,
   initProject,
   pickDirectory,
+  probeProject,
+  type FolderProbe,
   type ProjectData,
 } from "./api";
 import { Map } from "./Map";
@@ -29,13 +31,47 @@ function writePathToUrl(path: string): void {
   window.history.replaceState(null, "", url.toString());
 }
 
+const PROBE_DEBOUNCE_MS = 300;
+
+function displayIssue(message: string): string {
+  if (!/ENOENT|no such file or directory/i.test(message)) {
+    return message;
+  }
+  if (message.includes("project.json")) {
+    return "project.json is missing";
+  }
+  if (message.includes("plan.graph.json")) {
+    return "plan.graph.json is missing";
+  }
+  if (message.includes("progress.json")) {
+    return "progress.json is missing";
+  }
+  return "A required project file is missing";
+}
+
+function folderNotice(probe: FolderProbe): string | null {
+  switch (probe.kind) {
+    case "uninitialized":
+      return "This folder is not a Linklike project yet. Initialize it to create the map and notes.";
+    case "missing":
+      return "This path does not exist.";
+    case "not-a-directory":
+      return "This path is not a directory.";
+    default:
+      return null;
+  }
+}
+
 export function App() {
   const [path, setPath] = useState<string>(readPathFromUrl);
   const [inputPath, setInputPath] = useState<string>(readPathFromUrl);
   const [data, setData] = useState<ProjectData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorTitle, setErrorTitle] = useState("Could not open this project.");
   const [issues, setIssues] = useState<string[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [probe, setProbe] = useState<FolderProbe | null>(null);
   const [picking, setPicking] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drawerId, setDrawerId] = useState<string | null>(null);
@@ -43,9 +79,52 @@ export function App() {
 
   const pathRef = useRef(path);
   const loadGen = useRef(0);
+  const probeGen = useRef(0);
   const progressGen = useRef(0);
   const graphGen = useRef(0);
   const dataPathRef = useRef<string | null>(null);
+
+  const applyProbe = useCallback((result: FolderProbe) => {
+    setProbe(result);
+    const nextNotice = folderNotice(result);
+    setNotice(nextNotice);
+    if (result.kind === "invalid") {
+      setErrorTitle("Could not open this project.");
+      setError("This folder looks like a Linklike project, but it is not valid.");
+      setIssues(result.issues.map((issue) => displayIssue(issue.message)));
+    } else {
+      setError(null);
+      setIssues([]);
+    }
+  }, []);
+
+  const runProbe = useCallback(
+    async (target: string, gen: number): Promise<FolderProbe | null> => {
+      try {
+        const result = await probeProject(target);
+        if (gen !== probeGen.current) {
+          return null;
+        }
+        applyProbe(result);
+        return result;
+      } catch (err) {
+        if (gen !== probeGen.current) {
+          return null;
+        }
+        setProbe(null);
+        setNotice(null);
+        setErrorTitle("Could not open this project.");
+        if (err instanceof ApiError) {
+          setError(err.message);
+          setIssues(err.issues.map((issue) => displayIssue(issue.message)));
+        } else {
+          setError(err instanceof Error ? err.message : String(err));
+        }
+        return null;
+      }
+    },
+    [applyProbe],
+  );
 
   const load = useCallback(async (target: string) => {
     const gen = ++loadGen.current;
@@ -55,6 +134,7 @@ export function App() {
     setLoading(true);
     setError(null);
     setIssues([]);
+    setNotice(null);
     try {
       const project = await fetchProject(target);
       // Ignore this response if the user switched path, reloaded, or left the project.
@@ -85,9 +165,10 @@ export function App() {
         dataPathRef.current = null;
         setData(null);
       }
+      setErrorTitle("Could not open this project.");
       if (err instanceof ApiError) {
         setError(err.message);
-        setIssues(err.issues.map((issue) => issue.message));
+        setIssues(err.issues.map((issue) => displayIssue(issue.message)));
       } else {
         setError(err instanceof Error ? err.message : String(err));
       }
@@ -100,10 +181,54 @@ export function App() {
 
   useEffect(() => {
     pathRef.current = path;
-    if (path) {
-      void load(path);
+    if (!path) {
+      return;
     }
-  }, [path, load]);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const result = await probeProject(path);
+        if (cancelled || pathRef.current !== path) {
+          return;
+        }
+        applyProbe(result);
+        if (result.kind === "ready") {
+          void load(path);
+        }
+      } catch (err) {
+        if (cancelled || pathRef.current !== path) {
+          return;
+        }
+        setErrorTitle("Could not open this project.");
+        if (err instanceof ApiError) {
+          setError(err.message);
+          setIssues(err.issues.map((issue) => displayIssue(issue.message)));
+        } else {
+          setError(err instanceof Error ? err.message : String(err));
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [path, load, applyProbe]);
+
+  useEffect(() => {
+    const trimmed = inputPath.trim();
+    if (data) {
+      return;
+    }
+    if (!trimmed) {
+      setProbe(null);
+      setNotice(null);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      const gen = ++probeGen.current;
+      void runProbe(trimmed, gen);
+    }, PROBE_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [inputPath, data, runProbe]);
 
   const openPath = (trimmed: string) => {
     writePathToUrl(trimmed);
@@ -116,37 +241,48 @@ export function App() {
     }
   };
 
-  const onSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    const trimmed = inputPath.trim();
-    if (!trimmed) {
-      return;
-    }
-    openPath(trimmed);
-  };
-
-  const onInit = async (event: React.MouseEvent) => {
-    event.preventDefault();
-    const trimmed = inputPath.trim();
-    if (!trimmed) {
-      return;
-    }
+  const doInit = async (trimmed: string) => {
     setLoading(true);
     setError(null);
     setIssues([]);
+    setNotice(null);
     try {
       await initProject(trimmed);
     } catch (err) {
       setLoading(false);
+      setErrorTitle("Could not initialize this folder.");
       if (err instanceof ApiError) {
         setError(err.message);
-        setIssues(err.issues.map((issue) => issue.message));
+        setIssues(err.issues.map((issue) => displayIssue(issue.message)));
       } else {
         setError(err instanceof Error ? err.message : String(err));
       }
       return;
     }
     openPath(trimmed);
+  };
+
+  const onSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const trimmed = inputPath.trim();
+    if (!trimmed) {
+      return;
+    }
+    const gen = ++probeGen.current;
+    const latest = await runProbe(trimmed, gen);
+    if (latest?.kind === "uninitialized") {
+      await doInit(trimmed);
+      return;
+    }
+    if (latest?.kind === "missing" || latest?.kind === "not-a-directory") {
+      return;
+    }
+    if (latest?.kind === "invalid") {
+      return;
+    }
+    if (latest?.kind === "ready") {
+      openPath(trimmed);
+    }
   };
 
   const onBrowse = async () => {
@@ -156,12 +292,17 @@ export function App() {
       if ("path" in result) {
         setError(null);
         setIssues([]);
+        setNotice(null);
+        setProbe(null);
         setInputPath(result.path);
+        const gen = ++probeGen.current;
+        void runProbe(result.path, gen);
       }
     } catch (err) {
+      setErrorTitle("Could not open this project.");
       if (err instanceof ApiError) {
         setError(err.message);
-        setIssues(err.issues.map((issue) => issue.message));
+        setIssues(err.issues.map((issue) => displayIssue(issue.message)));
       } else {
         setError(err instanceof Error ? err.message : String(err));
       }
@@ -170,13 +311,25 @@ export function App() {
     }
   };
 
+  const onPathChange = (value: string) => {
+    setInputPath(value);
+    probeGen.current += 1;
+    setProbe(null);
+    setError(null);
+    setIssues([]);
+    setNotice(null);
+  };
+
   const onOpenAnother = () => {
     loadGen.current += 1;
+    probeGen.current += 1;
     dataPathRef.current = null;
     pathRef.current = "";
     setData(null);
     setError(null);
     setIssues([]);
+    setNotice(null);
+    setProbe(null);
     setSelectedId(null);
     setDrawerId(null);
     setLoading(false);
@@ -213,6 +366,10 @@ export function App() {
       current && deletedIds.includes(current) ? null : current,
     );
   };
+
+  const busy = loading || picking;
+  const canInit = probe?.kind === "uninitialized";
+  const canOpen = probe?.kind === "ready" || probe?.kind === "invalid";
 
   if (data) {
     return (
@@ -261,35 +418,51 @@ export function App() {
               type="text"
               value={inputPath}
               placeholder="/home/you/learning/my-topic"
-              onChange={(event) => setInputPath(event.target.value)}
+              onChange={(event) => onPathChange(event.target.value)}
+              onBlur={() => {
+                const trimmed = inputPath.trim();
+                if (!trimmed || data) {
+                  return;
+                }
+                const gen = ++probeGen.current;
+                void runProbe(trimmed, gen);
+              }}
               autoFocus
             />
             <button
               type="button"
               className="secondary"
               onClick={() => void onBrowse()}
-              disabled={loading || picking}
+              disabled={busy}
             >
               {picking ? "Browsing…" : "Browse"}
             </button>
           </div>
           <div className="home-actions">
-            <button type="submit" disabled={loading || picking || !inputPath.trim()}>
-              {loading ? "Opening…" : "Open project"}
-            </button>
-            <button
-              type="button"
-              className="secondary"
-              onClick={(event) => void onInit(event)}
-              disabled={loading || picking || !inputPath.trim()}
-            >
-              Initialize
-            </button>
+            {canInit ? (
+              <>
+                <button type="submit" disabled={busy}>
+                  {loading ? "Initializing…" : "Initialize"}
+                </button>
+                <button type="button" className="secondary" disabled>
+                  Open project
+                </button>
+              </>
+            ) : (
+              <button type="submit" disabled={busy || !canOpen}>
+                {loading ? "Opening…" : "Open project"}
+              </button>
+            )}
           </div>
         </form>
+        {notice && (
+          <div className="notice" role="status">
+            <p>{notice}</p>
+          </div>
+        )}
         {error && (
           <div className="error" role="alert">
-            <strong>Could not open this project.</strong>
+            <strong>{errorTitle}</strong>
             <p>{error}</p>
             {issues.length > 0 && (
               <ul>

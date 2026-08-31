@@ -49,6 +49,7 @@ import type {
   AddNodeOptions,
   AddNodeResult,
   DeleteNodeResult,
+  FolderProbe,
   ProjectData,
   ValidationIssue,
   ValidationResult,
@@ -58,6 +59,7 @@ export type {
   AddNodeOptions,
   AddNodeResult,
   DeleteNodeResult,
+  FolderProbe,
   ProjectData,
   ValidationIssue,
   ValidationResult,
@@ -149,6 +151,13 @@ function projectPaths(projectDir: string) {
     progressPath: path.join(projectDir, "progress.json"),
   };
 }
+
+const INIT_RELATIVE_PATHS = [
+  "project.json",
+  "plan.graph.json",
+  "progress.json",
+  path.join("nodes", "root.mdx"),
+] as const;
 
 const acquireProjectLock = (
   projectDir: string,
@@ -395,12 +404,38 @@ export const loadProjectDir = (
     return yield* readProjectData(projectDir);
   });
 
-const INIT_RELATIVE_PATHS = [
-  "project.json",
-  "plan.graph.json",
-  "progress.json",
-  path.join("nodes", "root.mdx"),
-] as const;
+export const probeProjectDir = (
+  projectDir: string,
+): Effect.Effect<FolderProbe, IoError> =>
+  Effect.gen(function* () {
+    const resolved = path.resolve(projectDir);
+    const info = yield* statPath(resolved);
+    if (info === null) {
+      return { kind: "missing" as const };
+    }
+    if (!info.isDirectory()) {
+      return { kind: "not-a-directory" as const };
+    }
+
+    // Same files init refuses to overwrite: any one means this is not a blank init.
+    let hasInitFile = false;
+    for (const relative of INIT_RELATIVE_PATHS) {
+      const existing = yield* statPath(path.join(resolved, relative));
+      if (existing !== null) {
+        hasInitFile = true;
+        break;
+      }
+    }
+    if (!hasInitFile) {
+      return { kind: "uninitialized" as const };
+    }
+
+    const result = yield* validateProjectDir(resolved);
+    if (result.ok) {
+      return { kind: "ready" as const };
+    }
+    return { kind: "invalid" as const, issues: result.issues };
+  });
 
 export const initProjectDir = (
   projectDir: string,

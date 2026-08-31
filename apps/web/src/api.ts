@@ -148,6 +148,21 @@ export async function initProject(path: string): Promise<ProjectData> {
   return (await res.json()) as ProjectData;
 }
 
+export type FolderProbe =
+  | { kind: "missing" }
+  | { kind: "not-a-directory" }
+  | { kind: "uninitialized" }
+  | { kind: "ready" }
+  | { kind: "invalid"; issues: ValidationIssue[] };
+
+export async function probeProject(path: string): Promise<FolderProbe> {
+  const res = await fetch(`/api/project/probe?path=${encodeURIComponent(path)}`);
+  if (!res.ok) {
+    throw await parseError(res);
+  }
+  return (await res.json()) as FolderProbe;
+}
+
 export async function pickDirectory(): Promise<{ path: string } | { cancelled: true }> {
   const res = await fetch("/api/project/pick-directory", { method: "POST" });
   if (!res.ok) {

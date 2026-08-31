@@ -13,6 +13,9 @@ test("initialize an empty directory then opens the map", async ({ page }) => {
 
   await page.goto("/");
   await page.locator("#path-input").fill(dir);
+  await expect(page.getByRole("status")).toContainText(
+    "This folder is not a Linklike project yet",
+  );
   await page.getByRole("button", { name: "Initialize" }).click();
   await expectProjectView(page);
   await expect(page.locator(".topbar-title strong")).toHaveText(name);
@@ -44,8 +47,11 @@ test("open does not write files into an empty directory", async ({ page }) => {
 
   await page.goto("/");
   await page.locator("#path-input").fill(dir);
-  await page.getByRole("button", { name: "Open project" }).click();
-  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(page.getByRole("status")).toContainText(
+    "This folder is not a Linklike project yet",
+  );
+  await expect(page.getByRole("button", { name: "Open project" })).toBeDisabled();
+  await expect(page.getByRole("alert")).toHaveCount(0);
   await expect(readFile(path.join(dir, "project.json"), "utf8")).rejects.toMatchObject({
     code: "ENOENT",
   });
@@ -67,8 +73,8 @@ test("initialize does not overwrite a corrupt project", async ({ page }) => {
 
   await page.goto("/");
   await page.locator("#path-input").fill(dir);
-  await page.getByRole("button", { name: "Initialize" }).click();
   await expect(page.getByRole("alert")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Initialize" })).toHaveCount(0);
   expect(await readFile(path.join(dir, "project.json"), "utf8")).toBe(before);
 });
 
@@ -102,8 +108,9 @@ test("initialize fails when the path does not exist", async ({ page }) => {
 
   await page.goto("/");
   await page.locator("#path-input").fill(dir);
-  await page.getByRole("button", { name: "Initialize" }).click();
-  await expect(page.getByRole("alert")).toContainText("does not exist");
+  await expect(page.getByRole("status")).toContainText("does not exist");
+  await expect(page.getByRole("button", { name: "Initialize" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Open project" })).toBeDisabled();
   await expect(readFile(path.join(dir, "project.json"), "utf8")).rejects.toMatchObject({
     code: "ENOENT",
   });
@@ -117,6 +124,9 @@ test("initialize is allowed in a non-empty folder without JSON files", async ({
 
   await page.goto("/");
   await page.locator("#path-input").fill(dir);
+  await expect(page.getByRole("status")).toContainText(
+    "This folder is not a Linklike project yet",
+  );
   await page.getByRole("button", { name: "Initialize" }).click();
   await expectProjectView(page);
   expect(await readFile(path.join(dir, "readme.txt"), "utf8")).toBe("keep me\n");
@@ -129,8 +139,8 @@ test("initialize does not overwrite an existing root note", async ({ page }) => 
 
   await page.goto("/");
   await page.locator("#path-input").fill(dir);
-  await page.getByRole("button", { name: "Initialize" }).click();
   await expect(page.getByRole("alert")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Initialize" })).toHaveCount(0);
   expect(await readFile(path.join(dir, "nodes", "root.mdx"), "utf8")).toBe(
     "KEEP THIS NOTE\n",
   );
@@ -151,8 +161,7 @@ test("browse success clears a previous open error", async ({ page }) => {
   const missing = path.join(tmpdir(), `linklike-e2e-browse-clear-${Date.now()}`);
   await page.goto("/");
   await page.locator("#path-input").fill(missing);
-  await page.getByRole("button", { name: "Open project" }).click();
-  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(page.getByRole("status")).toContainText("does not exist");
 
   await page.getByRole("button", { name: "Browse" }).click();
   await expect(page.locator("#path-input")).toHaveValue("/tmp/picked-after-error");

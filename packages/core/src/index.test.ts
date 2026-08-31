@@ -18,6 +18,7 @@ import {
   deleteNode,
   initProjectDir,
   loadProjectDir,
+  probeProjectDir,
   runCore,
   setProgress,
   writeNodeContent,
@@ -49,6 +50,64 @@ afterEach(async () => {
   await Promise.all(
     dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })),
   );
+});
+
+describe("probeProjectDir", () => {
+  it("reports missing when the path does not exist", async () => {
+    const dir = path.join(tmpdir(), `linklike-core-probe-missing-${Date.now()}`);
+    await expect(runCore(probeProjectDir(dir))).resolves.toEqual({ kind: "missing" });
+  });
+
+  it("reports not-a-directory for a file path", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "linklike-core-probe-"));
+    dirs.push(dir);
+    const filePath = path.join(dir, "not-a-dir");
+    await writeFile(filePath, "x\n");
+    await expect(runCore(probeProjectDir(filePath))).resolves.toEqual({
+      kind: "not-a-directory",
+    });
+  });
+
+  it("reports uninitialized for an empty directory", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "linklike-core-probe-"));
+    dirs.push(dir);
+    await expect(runCore(probeProjectDir(dir))).resolves.toEqual({
+      kind: "uninitialized",
+    });
+  });
+
+  it("reports uninitialized when other files exist but none of the init files", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "linklike-core-probe-"));
+    dirs.push(dir);
+    await writeFile(path.join(dir, "readme.txt"), "keep me\n");
+    await expect(runCore(probeProjectDir(dir))).resolves.toEqual({
+      kind: "uninitialized",
+    });
+  });
+
+  it("reports ready for a valid project", async () => {
+    const dir = await makeProject();
+    await expect(runCore(probeProjectDir(dir))).resolves.toEqual({ kind: "ready" });
+  });
+
+  it("reports invalid when a root note exists without project files", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "linklike-core-probe-"));
+    dirs.push(dir);
+    await mkdir(path.join(dir, "nodes"), { recursive: true });
+    await writeFile(path.join(dir, "nodes", "root.mdx"), "KEEP THIS NOTE\n");
+    const result = await runCore(probeProjectDir(dir));
+    expect(result.kind).toBe("invalid");
+    if (result.kind === "invalid") {
+      expect(result.issues.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("reports invalid for corrupt JSON", async () => {
+    const dir = await makeProject();
+    await writeFile(path.join(dir, "project.json"), "{ not valid json\n");
+    const result = await runCore(probeProjectDir(dir));
+    expect(result.kind).toBe("invalid");
+  });
 });
 
 describe("initProjectDir", () => {

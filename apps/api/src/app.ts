@@ -7,6 +7,7 @@ import {
   isLinklikeError,
   linklikeErrorMessage,
   loadProjectDir,
+  probeProjectDir,
   readNodeContent,
   runCore,
   setProgress,
@@ -72,6 +73,24 @@ export function createApp(
           422,
         );
       }
+      if (isLinklikeError(error)) {
+        const { status, body } = coreResponse(error);
+        return c.json(body, status);
+      }
+      return c.json({ tag: "UnknownError", error: String(error) }, 500);
+    }
+  });
+
+  app.get("/project/probe", async (c) => {
+    const dir = c.req.query("path");
+    if (!dir) {
+      return c.json({ error: "path query parameter is required" }, 400);
+    }
+
+    try {
+      const probe = await runCore(probeProjectDir(path.resolve(dir)));
+      return c.json(probe);
+    } catch (error) {
       if (isLinklikeError(error)) {
         const { status, body } = coreResponse(error);
         return c.json(body, status);
