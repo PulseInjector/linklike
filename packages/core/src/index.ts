@@ -28,6 +28,9 @@ import {
   LastNode,
   linklikeErrorMessage,
   LockTimeout,
+  NotADirectory,
+  PathNotFound,
+  ProjectExists,
   UnknownNode,
   UnknownParent,
   type LinklikeError,
@@ -60,6 +63,9 @@ export {
   IoError,
   LastNode,
   LockTimeout,
+  NotADirectory,
+  PathNotFound,
+  ProjectExists,
   UnknownNode,
   UnknownParent,
   isLinklikeError,
@@ -74,6 +80,23 @@ const LOCK_STALE_MS = 30_000;
 const LOCK_WAIT_MS = 10_000;
 
 type LockHandle = Awaited<ReturnType<typeof open>>;
+
+const statPath = (
+  filePath: string,
+): Effect.Effect<Awaited<ReturnType<typeof stat>> | null, IoError> =>
+  Effect.tryPromise({
+    try: async () => {
+      try {
+        return await stat(filePath);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+          return null;
+        }
+        throw error;
+      }
+    },
+    catch: (cause) => new IoError({ operation: `stat ${filePath}`, cause }),
+  });
 
 const readJson = (filePath: string): Effect.Effect<unknown, IoError> =>
   Effect.tryPromise({
@@ -348,6 +371,71 @@ export const loadProjectDir = (
     }
     return yield* readProjectData(projectDir);
   });
+
+const PROJECT_MARKERS = ["project.json", "plan.graph.json", "progress.json"] as const;
+
+export const initProjectDir = (
+  projectDir: string,
+): Effect.Effect<
+  ProjectData,
+  PathNotFound | NotADirectory | ProjectExists | LockTimeout | IoError
+> => {
+  const resolved = path.resolve(projectDir);
+
+  return Effect.gen(function* () {
+    const info = yield* statPath(resolved);
+    if (info === null) {
+      return yield* Effect.fail(new PathNotFound({ projectDir: resolved }));
+    }
+    if (!info.isDirectory()) {
+      return yield* Effect.fail(new NotADirectory({ projectDir: resolved }));
+    }
+
+    // Stat before locking: lock file lives inside the project directory.
+    return yield* withProjectLock(
+      resolved,
+      Effect.gen(function* () {
+        for (const marker of PROJECT_MARKERS) {
+          const existing = yield* statPath(path.join(resolved, marker));
+          if (existing !== null) {
+            return yield* Effect.fail(new ProjectExists({ projectDir: resolved }));
+          }
+        }
+
+        const name = path.basename(resolved) || "project";
+        const now = new Date().toISOString();
+        const { projectPath, graphPath, progressPath } = projectPaths(resolved);
+        const nodesDir = path.join(resolved, "nodes");
+
+        yield* Effect.tryPromise({
+          try: () => mkdir(nodesDir, { recursive: true }),
+          catch: (cause) => new IoError({ operation: `mkdir ${nodesDir}`, cause }),
+        });
+
+        const project = { version: 1 as const, name, createdAt: now };
+        const graph = {
+          version: 1 as const,
+          nodes: [{ id: "root", title: name }],
+          edges: [] as { from: string; to: string }[],
+        };
+        const progress = {
+          version: 1 as const,
+          entries: { root: { status: "learning" as const } },
+        };
+
+        yield* writeText(projectPath, `${JSON.stringify(project, null, 2)}\n`);
+        yield* writeText(graphPath, `${JSON.stringify(graph, null, 2)}\n`);
+        yield* writeText(progressPath, `${JSON.stringify(progress, null, 2)}\n`);
+        yield* writeText(
+          path.join(nodesDir, "root.mdx"),
+          `# ${name}\n\nStart your notes here.\n`,
+        );
+
+        return { project, graph, progress };
+      }),
+    );
+  });
+};
 
 export const readNodeContent = (
   projectDir: string,

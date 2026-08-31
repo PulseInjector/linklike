@@ -3,6 +3,7 @@ import path from "node:path";
 import {
   addNode,
   deleteNode,
+  initProjectDir,
   isLinklikeError,
   linklikeErrorMessage,
   loadProjectDir,
@@ -14,8 +15,10 @@ import {
 } from "@linklike/core";
 import { Hono } from "hono";
 
+import { pickFolderNative, type PickFolderResult } from "./pick-folder.js";
+
 function coreResponse(error: LinklikeError): {
-  status: 400 | 404 | 422 | 500;
+  status: 400 | 404 | 409 | 422 | 500;
   body: { tag: string; error: string };
 } {
   const message = linklikeErrorMessage(error);
@@ -24,20 +27,27 @@ function coreResponse(error: LinklikeError): {
       return { status: 422, body: { tag: error._tag, error: message } };
     case "InvalidNodeId":
     case "UnknownNode":
+    case "PathNotFound":
       return { status: 404, body: { tag: error._tag, error: message } };
     case "InvalidStatus":
     case "EmptyTitle":
     case "UnknownParent":
     case "GraphIntegrityError":
     case "LastNode":
+    case "NotADirectory":
       return { status: 400, body: { tag: error._tag, error: message } };
+    case "ProjectExists":
+      return { status: 409, body: { tag: error._tag, error: message } };
     case "LockTimeout":
     case "IoError":
       return { status: 500, body: { tag: error._tag, error: message } };
   }
 }
 
-export function createApp() {
+export function createApp(
+  options: { pickFolder?: () => Promise<PickFolderResult> } = {},
+) {
+  const pickFolder = options.pickFolder ?? pickFolderNative;
   const app = new Hono();
 
   app.get("/health", (c) => c.json({ ok: true }));
@@ -65,6 +75,49 @@ export function createApp() {
       if (isLinklikeError(error)) {
         const { status, body } = coreResponse(error);
         return c.json(body, status);
+      }
+      return c.json({ tag: "UnknownError", error: String(error) }, 500);
+    }
+  });
+
+  app.post("/project/pick-directory", async (c) => {
+    try {
+      const result = await pickFolder();
+      if (!result.ok && result.reason === "unavailable") {
+        return c.json(
+          { tag: "FolderPickerUnavailable", error: "folder picker is unavailable" },
+          503,
+        );
+      }
+      if (!result.ok) {
+        return c.json({ cancelled: true });
+      }
+      return c.json({ path: result.path });
+    } catch (error) {
+      return c.json({ tag: "UnknownError", error: String(error) }, 500);
+    }
+  });
+
+  app.post("/project/init", async (c) => {
+    let body: unknown;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "request body must be JSON" }, 400);
+    }
+
+    const { path: dir } = (body ?? {}) as Record<string, unknown>;
+    if (typeof dir !== "string") {
+      return c.json({ error: "path is a required string" }, 400);
+    }
+
+    try {
+      const data = await runCore(initProjectDir(path.resolve(dir)));
+      return c.json(data);
+    } catch (error) {
+      if (isLinklikeError(error)) {
+        const { status, body: responseBody } = coreResponse(error);
+        return c.json(responseBody, status);
       }
       return c.json({ tag: "UnknownError", error: String(error) }, 500);
     }

@@ -37,6 +37,40 @@ afterEach(async () => {
   );
 });
 
+describe("init", () => {
+  it("creates a project whose files load through core", async () => {
+    const parent = await mkdtemp(path.join(tmpdir(), "linklike-cli-init-"));
+    dirs.push(parent);
+    const dir = path.join(parent, "my-topic");
+
+    const { stdout } = await execFileAsync(process.execPath, [cliBin, "init", dir]);
+    expect(stdout).toContain(`Created project at ${dir}`);
+
+    const project = JSON.parse(
+      await readFile(path.join(dir, "project.json"), "utf8"),
+    ) as {
+      name: string;
+      version: number;
+    };
+    expect(project.name).toBe("my-topic");
+    expect(project.version).toBe(1);
+    expect(await readFile(path.join(dir, "nodes", "root.mdx"), "utf8")).toBe(
+      "# my-topic\n\nStart your notes here.\n",
+    );
+  });
+
+  it("refuses to overwrite an existing project", async () => {
+    const dir = await makeProject();
+    const before = await readFile(path.join(dir, "project.json"), "utf8");
+    await expect(
+      execFileAsync(process.execPath, [cliBin, "init", dir]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("already contains a Linklike project"),
+    });
+    expect(await readFile(path.join(dir, "project.json"), "utf8")).toBe(before);
+  });
+});
+
 describe("node write", () => {
   it("accepts a --body that starts with dashes", async () => {
     const dir = await makeProject();

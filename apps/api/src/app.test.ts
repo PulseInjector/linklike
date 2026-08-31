@@ -341,6 +341,90 @@ describe("api", () => {
   });
 });
 
+describe("POST /project/init", () => {
+  it("initializes an empty directory", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "linklike-api-init-"));
+    tempDirs.push(dir);
+    const app = createApp();
+
+    const res = await app.request("/project/init", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ path: dir }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { project: { name: string } };
+    expect(body.project.name).toBe(path.basename(dir));
+    expect(await readFile(path.join(dir, "nodes", "root.mdx"), "utf8")).toContain(
+      `# ${path.basename(dir)}`,
+    );
+  });
+
+  it("does not create a missing directory", async () => {
+    const dir = path.join(tmpdir(), `linklike-api-missing-${Date.now()}`);
+    const app = createApp();
+    const res = await app.request("/project/init", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ path: dir }),
+    });
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { tag: string };
+    expect(body.tag).toBe("PathNotFound");
+    await expect(
+      readFile(path.join(dir, "project.json"), "utf8"),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("does not overwrite a corrupt project", async () => {
+    const dir = await makeTempProject();
+    tempDirs.push(dir);
+    await writeFile(path.join(dir, "project.json"), "{ not valid json\n");
+    const app = createApp();
+    const res = await app.request("/project/init", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ path: dir }),
+    });
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { tag: string };
+    expect(body.tag).toBe("ProjectExists");
+    expect(await readFile(path.join(dir, "project.json"), "utf8")).toBe(
+      "{ not valid json\n",
+    );
+  });
+});
+
+describe("POST /project/pick-directory", () => {
+  it("writes the picked path", async () => {
+    const app = createApp({
+      pickFolder: async () => ({ ok: true, path: "/tmp/picked" }),
+    });
+    const res = await app.request("/project/pick-directory", { method: "POST" });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ path: "/tmp/picked" });
+  });
+
+  it("returns cancelled when the dialog is dismissed", async () => {
+    const app = createApp({
+      pickFolder: async () => ({ ok: false, reason: "cancelled" }),
+    });
+    const res = await app.request("/project/pick-directory", { method: "POST" });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ cancelled: true });
+  });
+
+  it("returns 503 when the system dialog is unavailable", async () => {
+    const app = createApp({
+      pickFolder: async () => ({ ok: false, reason: "unavailable" }),
+    });
+    const res = await app.request("/project/pick-directory", { method: "POST" });
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as { tag: string };
+    expect(body.tag).toBe("FolderPickerUnavailable");
+  });
+});
+
 const tempDirs: string[] = [];
 
 afterEach(async () => {

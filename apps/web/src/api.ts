@@ -135,3 +135,23 @@ export async function deleteNode(
     progress: Progress;
   };
 }
+
+export async function initProject(path: string): Promise<ProjectData> {
+  const res = await fetch("/api/project/init", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ path }),
+  });
+  if (!res.ok) {
+    throw await parseError(res);
+  }
+  return (await res.json()) as ProjectData;
+}
+
+export async function pickDirectory(): Promise<{ path: string } | { cancelled: true }> {
+  const res = await fetch("/api/project/pick-directory", { method: "POST" });
+  if (!res.ok) {
+    throw await parseError(res);
+  }
+  return (await res.json()) as { path: string } | { cancelled: true };
+}

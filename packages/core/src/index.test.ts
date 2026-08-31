@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   addNode,
   deleteNode,
+  initProjectDir,
   loadProjectDir,
   runCore,
   setProgress,
@@ -40,6 +41,101 @@ afterEach(async () => {
   await Promise.all(
     dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })),
   );
+});
+
+describe("initProjectDir", () => {
+  it("writes the same layout as CLI init into an empty directory", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "linklike-core-init-"));
+    dirs.push(dir);
+    const name = path.basename(dir);
+
+    const data = await runCore(initProjectDir(dir));
+    expect(data.project.name).toBe(name);
+    expect(data.project.version).toBe(1);
+    expect(data.graph.nodes).toEqual([{ id: "root", title: name }]);
+    expect(data.graph.edges).toEqual([]);
+    expect(data.progress.entries.root.status).toBe("learning");
+
+    expect(JSON.parse(await readFile(path.join(dir, "project.json"), "utf8"))).toEqual(
+      data.project,
+    );
+    expect(
+      JSON.parse(await readFile(path.join(dir, "plan.graph.json"), "utf8")),
+    ).toEqual(data.graph);
+    expect(JSON.parse(await readFile(path.join(dir, "progress.json"), "utf8"))).toEqual(
+      data.progress,
+    );
+    expect(await readFile(path.join(dir, "nodes", "root.mdx"), "utf8")).toBe(
+      `# ${name}\n\nStart your notes here.\n`,
+    );
+
+    const loaded = await runCore(loadProjectDir(dir));
+    expect(loaded.project.name).toBe(name);
+  });
+
+  it("allows a non-empty directory that has none of the three JSON files", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "linklike-core-init-"));
+    dirs.push(dir);
+    await writeFile(path.join(dir, "notes.txt"), "keep me\n");
+
+    await runCore(initProjectDir(dir));
+    expect(await readFile(path.join(dir, "notes.txt"), "utf8")).toBe("keep me\n");
+    expect(await readFile(path.join(dir, "project.json"), "utf8")).toContain(
+      path.basename(dir),
+    );
+  });
+
+  it("does not create a missing directory", async () => {
+    const dir = path.join(tmpdir(), `linklike-core-missing-${Date.now()}`);
+    await expect(runCore(initProjectDir(dir))).rejects.toMatchObject({
+      _tag: "PathNotFound",
+      projectDir: path.resolve(dir),
+    });
+    await expect(
+      readFile(path.join(dir, "project.json"), "utf8"),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("refuses a path that is not a directory", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "linklike-core-init-"));
+    dirs.push(dir);
+    const filePath = path.join(dir, "not-a-dir");
+    await writeFile(filePath, "x\n");
+    await expect(runCore(initProjectDir(filePath))).rejects.toMatchObject({
+      _tag: "NotADirectory",
+    });
+  });
+
+  it("does not overwrite when any of the three JSON files already exist", async () => {
+    const dir = await makeProject();
+    const projectBefore = await readFile(path.join(dir, "project.json"), "utf8");
+    const graphBefore = await readFile(path.join(dir, "plan.graph.json"), "utf8");
+    const progressBefore = await readFile(path.join(dir, "progress.json"), "utf8");
+
+    await expect(runCore(initProjectDir(dir))).rejects.toMatchObject({
+      _tag: "ProjectExists",
+    });
+    expect(await readFile(path.join(dir, "project.json"), "utf8")).toBe(projectBefore);
+    expect(await readFile(path.join(dir, "plan.graph.json"), "utf8")).toBe(graphBefore);
+    expect(await readFile(path.join(dir, "progress.json"), "utf8")).toBe(
+      progressBefore,
+    );
+  });
+
+  it("does not overwrite a corrupt project", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "linklike-core-init-"));
+    dirs.push(dir);
+    await writeFile(path.join(dir, "project.json"), "{ not valid json\n");
+    await writeFile(path.join(dir, "plan.graph.json"), "{ not valid json\n");
+    await writeFile(path.join(dir, "progress.json"), "{ not valid json\n");
+
+    await expect(runCore(initProjectDir(dir))).rejects.toMatchObject({
+      _tag: "ProjectExists",
+    });
+    expect(await readFile(path.join(dir, "project.json"), "utf8")).toBe(
+      "{ not valid json\n",
+    );
+  });
 });
 
 describe("addNode", () => {

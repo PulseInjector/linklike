@@ -7,6 +7,8 @@ import {
   createNode,
   deleteNode,
   fetchProject,
+  initProject,
+  pickDirectory,
   type ProjectData,
 } from "./api";
 import { Map } from "./Map";
@@ -34,6 +36,7 @@ export function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [issues, setIssues] = useState<string[]>([]);
+  const [picking, setPicking] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drawerId, setDrawerId] = useState<string | null>(null);
   const [contentEpoch, setContentEpoch] = useState(0);
@@ -102,12 +105,7 @@ export function App() {
     }
   }, [path, load]);
 
-  const onSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    const trimmed = inputPath.trim();
-    if (!trimmed) {
-      return;
-    }
+  const openPath = (trimmed: string) => {
     writePathToUrl(trimmed);
     pathRef.current = trimmed;
     if (trimmed === path) {
@@ -115,6 +113,58 @@ export function App() {
     } else {
       loadGen.current += 1;
       setPath(trimmed);
+    }
+  };
+
+  const onSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const trimmed = inputPath.trim();
+    if (!trimmed) {
+      return;
+    }
+    openPath(trimmed);
+  };
+
+  const onInit = async (event: React.MouseEvent) => {
+    event.preventDefault();
+    const trimmed = inputPath.trim();
+    if (!trimmed) {
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setIssues([]);
+    try {
+      await initProject(trimmed);
+    } catch (err) {
+      setLoading(false);
+      if (err instanceof ApiError) {
+        setError(err.message);
+        setIssues(err.issues.map((issue) => issue.message));
+      } else {
+        setError(err instanceof Error ? err.message : String(err));
+      }
+      return;
+    }
+    openPath(trimmed);
+  };
+
+  const onBrowse = async () => {
+    setPicking(true);
+    try {
+      const result = await pickDirectory();
+      if ("path" in result) {
+        setInputPath(result.path);
+      }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+        setIssues(err.issues.map((issue) => issue.message));
+      } else {
+        setError(err instanceof Error ? err.message : String(err));
+      }
+    } finally {
+      setPicking(false);
     }
   };
 
@@ -198,20 +248,42 @@ export function App() {
     <main className="home">
       <div className="home-card">
         <h1>Linklike</h1>
-        <p className="subtitle">Open a local learning project to see its map.</p>
+        <p className="subtitle">
+          Open a local learning project, or initialize a folder.
+        </p>
         <form onSubmit={onSubmit}>
           <label htmlFor="path-input">Project directory (absolute path)</label>
-          <input
-            id="path-input"
-            type="text"
-            value={inputPath}
-            placeholder="/home/you/learning/my-topic"
-            onChange={(event) => setInputPath(event.target.value)}
-            autoFocus
-          />
-          <button type="submit" disabled={loading || !inputPath.trim()}>
-            {loading ? "Opening…" : "Open project"}
-          </button>
+          <div className="path-row">
+            <input
+              id="path-input"
+              type="text"
+              value={inputPath}
+              placeholder="/home/you/learning/my-topic"
+              onChange={(event) => setInputPath(event.target.value)}
+              autoFocus
+            />
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => void onBrowse()}
+              disabled={loading || picking}
+            >
+              {picking ? "Browsing…" : "Browse"}
+            </button>
+          </div>
+          <div className="home-actions">
+            <button type="submit" disabled={loading || picking || !inputPath.trim()}>
+              {loading ? "Opening…" : "Open project"}
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={(event) => void onInit(event)}
+              disabled={loading || picking || !inputPath.trim()}
+            >
+              Initialize
+            </button>
+          </div>
         </form>
         {error && (
           <div className="error" role="alert">
