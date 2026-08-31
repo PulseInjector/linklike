@@ -1,17 +1,16 @@
 import { expect, test } from "@playwright/test";
 
 import { copyMinimalProject, writeNodeMarkdown } from "../helpers/project.js";
-import { openProject } from "../helpers/ui.js";
+import { openNodeDrawer, openProject } from "../helpers/ui.js";
 
 test("reload refreshes open node markdown after disk edit", async ({ page }) => {
   const projectDir = await copyMinimalProject();
 
   await openProject(page, projectDir);
-  await page
-    .locator(".react-flow__node")
-    .filter({ hasText: "Minimal example" })
-    .click();
-  await expect(page.locator(".drawer .markdown")).toContainText("Fixture project");
+  await openNodeDrawer(page, "Minimal example");
+  await expect(page.locator(".drawer .notes-document")).toContainText(
+    "Fixture project",
+  );
 
   await writeNodeMarkdown(
     projectDir,
@@ -20,7 +19,7 @@ test("reload refreshes open node markdown after disk edit", async ({ page }) => 
   );
 
   await page.getByRole("button", { name: "Reload" }).click();
-  await expect(page.locator(".drawer .markdown")).toContainText(
+  await expect(page.locator(".drawer .notes-document")).toContainText(
     "Updated on disk for e2e.",
   );
 });

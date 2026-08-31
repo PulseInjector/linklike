@@ -3,11 +3,13 @@ import path from "node:path";
 
 import {
   addNode,
+  deleteNode,
   isLinklikeError,
   linklikeErrorMessage,
   runCore,
   setProgress,
   validateProjectDir,
+  writeNodeContent,
 } from "@linklike/core";
 import { PROGRESS_WRITE_STATUSES } from "@linklike/protocol";
 
@@ -19,19 +21,33 @@ Usage:
   linklike validate <directory> [--json]
   linklike progress set <directory> <nodeId> --status <${PROGRESS_WRITE_STATUSES.join("|")}>
   linklike node add <directory> --title <title> [--parent <nodeId>]
+  linklike node delete <directory> <nodeId>
+  linklike node write <directory> <nodeId> [--body <markdown>]
 `);
 }
 
-function parseFlag(args: string[], flag: string): string | undefined {
+function parseFlag(
+  args: string[],
+  flag: string,
+  allowLeadingDashes = false,
+): string | undefined {
   const index = args.indexOf(flag);
   if (index === -1) {
     return undefined;
   }
   const value = args[index + 1];
-  if (value === undefined || value.startsWith("--")) {
+  if (value === undefined || (!allowLeadingDashes && value.startsWith("--"))) {
     throw new Error(`${flag} requires a value`);
   }
   return value;
+}
+
+async function readStdin(): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks).toString("utf8");
 }
 
 async function initProject(targetDir: string): Promise<void> {
@@ -127,6 +143,41 @@ async function main(): Promise<void> {
     if (result.nodeFileCreated) {
       console.log(`Created nodes/${result.id}.mdx`);
     }
+    return;
+  }
+
+  if (command === "node" && rest[0] === "delete") {
+    const target = rest[1];
+    const nodeId = rest[2];
+    if (!target || !nodeId) {
+      throw new Error("usage: linklike node delete <directory> <nodeId>");
+    }
+    const result = await runCore(deleteNode(path.resolve(target), nodeId));
+    console.log(`Deleted ${result.deletedIds.join(", ")}`);
+    return;
+  }
+
+  if (command === "node" && rest[0] === "write") {
+    const target = rest[1];
+    const nodeId = rest[2];
+    if (!target || !nodeId) {
+      throw new Error(
+        "usage: linklike node write <directory> <nodeId> [--body <markdown>]",
+      );
+    }
+    const flagged = parseFlag(rest, "--body", true);
+    let body: string;
+    if (flagged !== undefined) {
+      body = flagged;
+    } else if (process.stdin.isTTY) {
+      throw new Error(
+        "usage: linklike node write <directory> <nodeId> [--body <markdown>]",
+      );
+    } else {
+      body = await readStdin();
+    }
+    await runCore(writeNodeContent(path.resolve(target), nodeId, body));
+    console.log(`Wrote nodes/${nodeId}.mdx`);
     return;
   }
 

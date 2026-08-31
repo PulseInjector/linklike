@@ -5,6 +5,7 @@ import {
   planGraphSchema,
   progressSchema,
   projectSchema,
+  subtreeNodeIds,
   validateGraphIntegrity,
   validateProgressKeys,
   type PlanGraph,
@@ -24,6 +25,7 @@ import {
   InvalidStatus,
   IoError,
   isLinklikeError,
+  LastNode,
   linklikeErrorMessage,
   LockTimeout,
   UnknownNode,
@@ -31,9 +33,11 @@ import {
   type LinklikeError,
 } from "./errors.js";
 import { runCoreEffect } from "./runtime.js";
+import { moveToOsTrash } from "./trash.js";
 import type {
   AddNodeOptions,
   AddNodeResult,
+  DeleteNodeResult,
   ProjectData,
   ValidationIssue,
   ValidationResult,
@@ -42,6 +46,7 @@ import type {
 export type {
   AddNodeOptions,
   AddNodeResult,
+  DeleteNodeResult,
   ProjectData,
   ValidationIssue,
   ValidationResult,
@@ -53,6 +58,7 @@ export {
   InvalidProject,
   InvalidStatus,
   IoError,
+  LastNode,
   LockTimeout,
   UnknownNode,
   UnknownParent,
@@ -498,6 +504,123 @@ export const addNode = (
       yield* writeText(graphPath, `${JSON.stringify(validated, null, 2)}\n`);
 
       return { id, graph: validated, nodeFileCreated };
+    }),
+  );
+};
+
+export const deleteNode = (
+  projectDir: string,
+  nodeId: string,
+): Effect.Effect<
+  DeleteNodeResult,
+  | InvalidNodeId
+  | UnknownNode
+  | LastNode
+  | InvalidProject
+  | GraphIntegrityError
+  | LockTimeout
+  | IoError
+> => {
+  if (!SAFE_NODE_ID.test(nodeId)) {
+    return Effect.fail(new InvalidNodeId({ nodeId }));
+  }
+
+  return withProjectLock(
+    projectDir,
+    Effect.gen(function* () {
+      const existingProject = yield* validateProjectDir(projectDir);
+      if (!existingProject.ok) {
+        return yield* Effect.fail(
+          new InvalidProject({ issues: existingProject.issues }),
+        );
+      }
+
+      const { graphPath, progressPath } = projectPaths(projectDir);
+      const graph = planGraphSchema.parse(yield* readJson(graphPath));
+      if (!graph.nodes.some((node) => node.id === nodeId)) {
+        return yield* Effect.fail(new UnknownNode({ nodeId }));
+      }
+
+      const deletedIds = subtreeNodeIds(graph, nodeId);
+      if (deletedIds.size >= graph.nodes.length) {
+        return yield* Effect.fail(new LastNode());
+      }
+
+      const nextGraph: PlanGraph = {
+        ...graph,
+        nodes: graph.nodes.filter((node) => !deletedIds.has(node.id)),
+        edges: graph.edges.filter(
+          (edge) => !deletedIds.has(edge.from) && !deletedIds.has(edge.to),
+        ),
+      };
+      const validated = planGraphSchema.parse(nextGraph);
+      const integrityErrors = validateGraphIntegrity(validated);
+      if (integrityErrors.length > 0) {
+        return yield* Effect.fail(
+          new GraphIntegrityError({ messages: integrityErrors }),
+        );
+      }
+
+      const progress = progressSchema.parse(yield* readJson(progressPath));
+      for (const id of deletedIds) {
+        delete progress.entries[id];
+      }
+
+      // Extra progress keys are invalid; missing keys are not. Write progress first so a
+      // later graph-write failure cannot strand an illegal project.
+      yield* writeText(progressPath, `${JSON.stringify(progress, null, 2)}\n`);
+      yield* writeText(graphPath, `${JSON.stringify(validated, null, 2)}\n`);
+
+      for (const id of deletedIds) {
+        const nodePath = path.join(projectDir, "nodes", `${id}.mdx`);
+        const exists = yield* readText(nodePath).pipe(
+          Effect.as(true),
+          Effect.catchAll(() => Effect.succeed(false)),
+        );
+        if (exists) {
+          // Graph is already committed; leftover notes are extra files, not InvalidProject.
+          yield* moveToOsTrash(nodePath).pipe(Effect.catchAll(() => Effect.void));
+        }
+      }
+
+      return { deletedIds: [...deletedIds], graph: validated, progress };
+    }),
+  );
+};
+
+export const writeNodeContent = (
+  projectDir: string,
+  nodeId: string,
+  body: string,
+): Effect.Effect<
+  string,
+  InvalidNodeId | UnknownNode | InvalidProject | LockTimeout | IoError
+> => {
+  if (!SAFE_NODE_ID.test(nodeId)) {
+    return Effect.fail(new InvalidNodeId({ nodeId }));
+  }
+
+  return withProjectLock(
+    projectDir,
+    Effect.gen(function* () {
+      const existingProject = yield* validateProjectDir(projectDir);
+      if (!existingProject.ok) {
+        return yield* Effect.fail(
+          new InvalidProject({ issues: existingProject.issues }),
+        );
+      }
+
+      const graphPath = path.join(projectDir, "plan.graph.json");
+      const json = yield* readJson(graphPath);
+      const graph = planGraphSchema.parse(json);
+
+      if (!graph.nodes.some((node) => node.id === nodeId)) {
+        return yield* Effect.fail(new UnknownNode({ nodeId }));
+      }
+
+      const nodePath = path.join(projectDir, "nodes", `${nodeId}.mdx`);
+      yield* writeText(nodePath, body);
+      return body;
     }),
   );
 };

@@ -64,6 +64,23 @@ export async function fetchNode(path: string, nodeId: string): Promise<string> {
   return body.markdown;
 }
 
+export async function writeNode(
+  path: string,
+  nodeId: string,
+  markdown: string,
+): Promise<string> {
+  const res = await fetch(`/api/project/nodes/${encodeURIComponent(nodeId)}`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ path, markdown }),
+  });
+  if (!res.ok) {
+    throw await parseError(res);
+  }
+  const body = (await res.json()) as { markdown: string };
+  return body.markdown;
+}
+
 export async function updateProgress(
   path: string,
   nodeId: string,
@@ -79,4 +96,42 @@ export async function updateProgress(
   }
   const body = (await res.json()) as { progress: Progress };
   return body.progress;
+}
+
+export async function createNode(
+  path: string,
+  title: string,
+  parent?: string,
+): Promise<{ id: string; graph: PlanGraph; nodeFileCreated: boolean }> {
+  const res = await fetch("/api/project/nodes", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ path, title, parent }),
+  });
+  if (!res.ok) {
+    throw await parseError(res);
+  }
+  return (await res.json()) as {
+    id: string;
+    graph: PlanGraph;
+    nodeFileCreated: boolean;
+  };
+}
+
+export async function deleteNode(
+  path: string,
+  nodeId: string,
+): Promise<{ deletedIds: string[]; graph: PlanGraph; progress: Progress }> {
+  const res = await fetch(
+    `/api/project/nodes/${encodeURIComponent(nodeId)}?path=${encodeURIComponent(path)}`,
+    { method: "DELETE" },
+  );
+  if (!res.ok) {
+    throw await parseError(res);
+  }
+  return (await res.json()) as {
+    deletedIds: string[];
+    graph: PlanGraph;
+    progress: Progress;
+  };
 }

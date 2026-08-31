@@ -1,4 +1,5 @@
 @import "../../../design/learning-map/tokens.css";
+@import "../../../design/notes/tokens.css";
 
 * {
   box-sizing: border-box;
@@ -171,6 +172,11 @@ button.secondary {
   box-shadow: none;
   font-size: inherit;
   color: inherit;
+  overflow: visible;
+}
+
+.react-flow__nodes {
+  overflow: visible;
 }
 
 .react-flow__node-section {
@@ -181,6 +187,37 @@ button.secondary {
   width: 100%;
   height: 100%;
   position: relative;
+  overflow: visible;
+}
+
+.map-node-toolbar {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.25rem;
+  z-index: 5;
+  pointer-events: auto;
+}
+
+.map-node-toolbar.is-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.map-node-toolbar button {
+  padding: 0.25rem 0.55rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.map-node-title-input {
+  min-width: 10rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
 }
 
 .map-node {
@@ -317,43 +354,51 @@ button.secondary {
 }
 
 .drawer-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.notes-loading {
   padding: 1rem;
+}
+
+.notes-editor-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.notes-editor {
+  min-height: 8rem;
+  resize: vertical;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.notes-preview {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  padding: 1rem;
+  background: var(--notes-bg);
+}
+
+.notes-document {
+  overflow-wrap: break-word;
 }
 
 .muted {
   color: var(--muted);
-}
-
-.markdown {
-  line-height: 1.6;
-  overflow-wrap: break-word;
-}
-
-.markdown h1 {
-  font-size: 1.3rem;
-}
-
-.markdown h2 {
-  font-size: 1.1rem;
-}
-
-.markdown pre {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.75rem;
-  overflow-x: auto;
-}
-
-.markdown code {
-  background: var(--bg);
-  padding: 0.1rem 0.3rem;
-  border-radius: 4px;
-  font-size: 0.9em;
-}
-
-.markdown pre code {
-  padding: 0;
-  background: transparent;
 }

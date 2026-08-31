@@ -76,3 +76,26 @@ export function validateProgressKeys(graph: PlanGraph, progress: Progress): stri
 
   return errors;
 }
+
+export function subtreeNodeIds(graph: PlanGraph, nodeId: string): Set<string> {
+  const children = new Map<string, string[]>();
+  for (const edge of graph.edges) {
+    const list = children.get(edge.from) ?? [];
+    list.push(edge.to);
+    children.set(edge.from, list);
+  }
+
+  const ids = new Set<string>();
+  const stack = [nodeId];
+  while (stack.length > 0) {
+    const id = stack.pop()!;
+    if (ids.has(id)) {
+      continue;
+    }
+    ids.add(id);
+    for (const child of children.get(id) ?? []) {
+      stack.push(child);
+    }
+  }
+  return ids;
+}

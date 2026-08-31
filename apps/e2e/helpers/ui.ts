@@ -26,6 +26,15 @@ export function mapNode(page: Page, title: string) {
   return page.locator(".map-node").filter({ hasText: new RegExp(`^${escaped}$`) });
 }
 
+export async function selectMapNode(page: Page, title: string): Promise<void> {
+  await mapNode(page, title).click();
+}
+
+export async function openNodeDrawer(page: Page, title: string): Promise<void> {
+  await mapNode(page, title).dblclick();
+  await expect(page.locator(".drawer h2")).toHaveText(title);
+}
+
 export const STATUS_BG = {
   learning: tokens.progress.learning.backgroundRgb,
   done: tokens.progress.done.backgroundRgb,

@@ -14,6 +14,7 @@
     "lint:comments": "node scripts/lint-comments.mjs",
     "validate": "node packages/cli/bin/linklike.mjs validate fixtures/minimal-project",
     "capture:design": "pnpm --filter @linklike/e2e capture:design",
+    "capture:notes": "pnpm --filter @linklike/e2e capture:notes",
     "sync:reference-map": "node scripts/sync-reference-map.mjs",
     "test": "pnpm -r --if-present test",
     "test:e2e": "pnpm --filter @linklike/e2e test",
