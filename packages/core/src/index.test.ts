@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -307,6 +307,55 @@ describe.sequential("deleteNode", () => {
     expect(load.graph.nodes.map((node) => node.id)).toEqual(["root"]);
     expect(load.progress.entries.root.status).toBe("done");
   });
+
+  it.skipIf(process.platform === "win32")(
+    "leaves the project valid when progress cannot be written",
+    async () => {
+      const dir = await makeProject();
+      await runCore(addNode(dir, { title: "Child", parent: "root" }));
+      await runCore(setProgress(dir, "child", "done"));
+      const graphBefore = await readFile(path.join(dir, "plan.graph.json"), "utf8");
+      const progressPath = path.join(dir, "progress.json");
+      await chmod(progressPath, 0o444);
+      try {
+        await expect(runCore(deleteNode(dir, "child"))).rejects.toMatchObject({
+          _tag: "IoError",
+        });
+      } finally {
+        await chmod(progressPath, 0o644);
+      }
+      expect(await readFile(path.join(dir, "plan.graph.json"), "utf8")).toBe(
+        graphBefore,
+      );
+      const load = await runCore(loadProjectDir(dir));
+      expect(load.graph.nodes.map((node) => node.id)).toEqual(["root", "child"]);
+    },
+  );
+
+  it("commits graph and progress when trash fails", async () => {
+    const dir = await makeProject();
+    await runCore(addNode(dir, { title: "Child", parent: "root" }));
+    await runCore(setProgress(dir, "child", "done"));
+    const dataHome = path.join(dir, "xdg-is-a-file");
+    await writeFile(dataHome, "not-a-directory");
+    const previous = process.env.XDG_DATA_HOME;
+    process.env.XDG_DATA_HOME = dataHome;
+    try {
+      const result = await runCore(deleteNode(dir, "child"));
+      expect(result.deletedIds).toEqual(["child"]);
+    } finally {
+      if (previous === undefined) {
+        delete process.env.XDG_DATA_HOME;
+      } else {
+        process.env.XDG_DATA_HOME = previous;
+      }
+    }
+    const load = await runCore(loadProjectDir(dir));
+    expect(load.graph.nodes.map((node) => node.id)).toEqual(["root"]);
+    expect(await readFile(path.join(dir, "nodes", "child.mdx"), "utf8")).toContain(
+      "# Child",
+    );
+  });
 });
 
 describe("writeNodeContent", () => {
@@ -355,5 +404,19 @@ describe("writeNodeContent", () => {
       "Race.",
     );
     expect(load.progress.entries.root.status).toBe("skip");
+  });
+
+  it("refuses to mutate an invalid project", async () => {
+    const dir = await makeProject();
+    await runCore(addNode(dir, { title: "Child", parent: "root" }));
+    await rm(path.join(dir, "nodes", "root.mdx"));
+    await expect(
+      runCore(writeNodeContent(dir, "child", "# Child\n")),
+    ).rejects.toMatchObject({
+      _tag: "InvalidProject",
+    });
+    expect(await readFile(path.join(dir, "nodes", "child.mdx"), "utf8")).toContain(
+      "# Child",
+    );
   });
 });

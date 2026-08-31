@@ -15,7 +15,12 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
-import type { PlanGraph, Progress, ProgressStatus } from "@linklike/protocol";
+import {
+  subtreeNodeIds,
+  type PlanGraph,
+  type Progress,
+  type ProgressStatus,
+} from "@linklike/protocol";
 
 import tokens from "../../../design/learning-map/tokens.json";
 import { layoutLearningMap } from "./layout";
@@ -79,7 +84,7 @@ export function Map({
   const graphId = useMemo(() => graph.nodes.map((node) => node.id).join("\0"), [graph]);
   const [addingForId, setAddingForId] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
-  const canDelete = graph.nodes.length > 1;
+  const committingAdd = useRef(false);
   const pendingClick = useRef<{
     id: string;
     timer: ReturnType<typeof setTimeout>;
@@ -106,14 +111,22 @@ export function Map({
   };
 
   const commitAdd = async () => {
+    if (committingAdd.current) {
+      return;
+    }
     const title = draftTitle.trim();
     const parentId = addingForId;
     if (!parentId || !title) {
       cancelAdd();
       return;
     }
-    await onAdd(parentId, title);
-    cancelAdd();
+    committingAdd.current = true;
+    try {
+      await onAdd(parentId, title);
+      cancelAdd();
+    } finally {
+      committingAdd.current = false;
+    }
   };
 
   const requestDelete = async (nodeId: string) => {
@@ -152,7 +165,7 @@ export function Map({
         label: node.title,
         kind: node.kind,
         status: statusOf(progress, node.id),
-        canDelete,
+        canDelete: subtreeNodeIds(graph, node.id).size < graph.nodes.length,
         adding: addingForId === node.id,
         draftTitle: addingForId === node.id ? draftTitle : "",
         onAdd: () => {
@@ -160,11 +173,11 @@ export function Map({
           setDraftTitle("");
         },
         onDelete: () => {
-          void requestDelete(node.id);
+          void requestDelete(node.id).catch(() => undefined);
         },
         onDraftChange: setDraftTitle,
         onCommitAdd: () => {
-          void commitAdd();
+          void commitAdd().catch(() => undefined);
         },
         onCancelAdd: cancelAdd,
         onOpenNotes: () => onOpenNotes(node.id),
@@ -180,13 +193,12 @@ export function Map({
     laidOut,
     progress,
     selectedId,
-    canDelete,
     addingForId,
     draftTitle,
     onAdd,
     onDelete,
     onOpenNotes,
-    graph.edges,
+    graph,
   ]);
 
   const edges = useMemo<Edge[]>(() => {

@@ -220,6 +220,21 @@ describe("api", () => {
     expect(await readFile(path.join(dir, "nodes", "root.mdx"), "utf8")).toBe("");
   });
 
+  it("rejects PUT on an invalid project", async () => {
+    const dir = await makeTempProject();
+    tempDirs.push(dir);
+    await rm(path.join(dir, "nodes", "root.mdx"));
+
+    const res = await app.request("/project/nodes/root", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ path: dir, markdown: "# Root\n" }),
+    });
+    expect(res.status).toBe(422);
+    const body = (await res.json()) as { tag: string };
+    expect(body.tag).toBe("InvalidProject");
+  });
+
   it("rejects an illegal node id on PUT", async () => {
     const dir = await makeTempProject();
     tempDirs.push(dir);

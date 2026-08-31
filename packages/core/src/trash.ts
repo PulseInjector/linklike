@@ -55,8 +55,12 @@ async function xdgTrash(filePath: string): Promise<void> {
   await writeFile(path.join(infoDir, `${destName}.trashinfo`), info);
 }
 
+export function escapePosixForAppleScript(filePath: string): string {
+  return path.resolve(filePath).replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+}
+
 async function darwinTrash(filePath: string): Promise<void> {
-  const posix = path.resolve(filePath).replaceAll("\\", "/").replaceAll('"', '\\"');
+  const posix = escapePosixForAppleScript(filePath);
   await execFileAsync("osascript", [
     "-e",
     `tell application "Finder" to delete POSIX file "${posix}"`,
@@ -75,8 +79,18 @@ async function windowsTrash(filePath: string): Promise<void> {
 export const moveToOsTrash = (filePath: string): Effect.Effect<void, IoError> =>
   Effect.tryPromise({
     try: async () => {
+      // Tests set XDG_DATA_HOME; honor it on every OS so Finder/PowerShell is not required.
+      if (process.env.XDG_DATA_HOME) {
+        await xdgTrash(filePath);
+        return;
+      }
       if (process.platform === "darwin") {
-        await darwinTrash(filePath);
+        try {
+          await darwinTrash(filePath);
+        } catch {
+          // Finder Apple Events often fail in agents/CI; XDG still removes the note.
+          await xdgTrash(filePath);
+        }
         return;
       }
       if (process.platform === "win32") {

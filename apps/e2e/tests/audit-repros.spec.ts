@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import {
   copyMinimalProject,
   copyTwoNodeProject,
+  readGraphFile,
   setProjectName,
 } from "../helpers/project.js";
 import {
@@ -10,6 +11,7 @@ import {
   mapNode,
   openNodeDrawer,
   openProject,
+  selectMapNode,
   STATUS_BG,
 } from "../helpers/ui.js";
 
@@ -50,10 +52,17 @@ async function submitProjectPath(page: import("@playwright/test").Page): Promise
   });
 }
 
-// Audit-panel blocker reproduction map (tmp/reviews SHORT_SHA 05-repro-map.md)
-// A: manual CLI / DevTools Offline
-// B: this file
-// C: scripts/graph-progress-race.ts
+// Classification map — tmp/reviews/ba93fc4/05-repro-map.md
+// A F1: CLI delete after chmod a-w progress.json (half-commit)
+// A F2: CLI node write on project missing nodes/root.mdx
+// A F4: UI Delete on root / CLI node delete root → LastNode
+// A F6: core deleteNode trash assertion on darwin (XDG vs Finder)
+// A F7: CLI node write --body '---'
+// A F8: failed add/delete → unhandledrejection (void commitAdd/requestDelete)
+// A F9: darwinTrash replace \\ with / on a path that contains backslash
+// B F3: this file — slow POST + double Enter
+// D F5 OpeningView graphId
+// C: none this round
 
 test.describe("audit reproducers (timing / network only)", () => {
   test("stale GET /project overwrites UI after faster path switch", async ({
@@ -160,5 +169,34 @@ test.describe("audit reproducers (timing / network only)", () => {
     await expect(page.getByRole("alert")).toBeVisible();
     await expect(page.getByRole("button", { name: "Reload" })).toBeVisible();
     await expect(page.locator("#path-input")).toHaveCount(0);
+  });
+
+  test("F3: slow POST add does not create two nodes from double Enter", async ({
+    page,
+  }) => {
+    await page.route("**/api/project/nodes", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.continue();
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, SLOW_GET_MS));
+      await route.continue();
+    });
+
+    const projectDir = await copyTwoNodeProject();
+    await openProject(page, projectDir);
+
+    await selectMapNode(page, "Minimal example");
+    await page.getByRole("button", { name: "Add" }).click();
+    await page.getByLabel("New node title").fill("Race child");
+    await page.getByLabel("New node title").press("Enter");
+    await page.getByLabel("New node title").press("Enter");
+
+    await expect(page.getByTestId("rf__node-race-child")).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(mapNode(page, "Race child")).toHaveCount(1);
+    const graph = await readGraphFile(projectDir);
+    expect(graph.nodes.filter((node) => node.title === "Race child")).toHaveLength(1);
   });
 });

@@ -5,6 +5,7 @@ import {
   planGraphSchema,
   progressSchema,
   projectSchema,
+  subtreeNodeIds,
   validateGraphIntegrity,
   validateProgressKeys,
   type PlanGraph,
@@ -507,29 +508,6 @@ export const addNode = (
   );
 };
 
-function parentDescendants(graph: PlanGraph, rootId: string): Set<string> {
-  const children = new Map<string, string[]>();
-  for (const edge of graph.edges) {
-    const list = children.get(edge.from) ?? [];
-    list.push(edge.to);
-    children.set(edge.from, list);
-  }
-
-  const ids = new Set<string>();
-  const stack = [rootId];
-  while (stack.length > 0) {
-    const id = stack.pop()!;
-    if (ids.has(id)) {
-      continue;
-    }
-    ids.add(id);
-    for (const child of children.get(id) ?? []) {
-      stack.push(child);
-    }
-  }
-  return ids;
-}
-
 export const deleteNode = (
   projectDir: string,
   nodeId: string,
@@ -563,7 +541,7 @@ export const deleteNode = (
         return yield* Effect.fail(new UnknownNode({ nodeId }));
       }
 
-      const deletedIds = parentDescendants(graph, nodeId);
+      const deletedIds = subtreeNodeIds(graph, nodeId);
       if (deletedIds.size >= graph.nodes.length) {
         return yield* Effect.fail(new LastNode());
       }
@@ -588,8 +566,10 @@ export const deleteNode = (
         delete progress.entries[id];
       }
 
-      yield* writeText(graphPath, `${JSON.stringify(validated, null, 2)}\n`);
+      // Extra progress keys are invalid; missing keys are not. Write progress first so a
+      // later graph-write failure cannot strand an illegal project.
       yield* writeText(progressPath, `${JSON.stringify(progress, null, 2)}\n`);
+      yield* writeText(graphPath, `${JSON.stringify(validated, null, 2)}\n`);
 
       for (const id of deletedIds) {
         const nodePath = path.join(projectDir, "nodes", `${id}.mdx`);
@@ -598,7 +578,8 @@ export const deleteNode = (
           Effect.catchAll(() => Effect.succeed(false)),
         );
         if (exists) {
-          yield* moveToOsTrash(nodePath);
+          // Graph is already committed; leftover notes are extra files, not InvalidProject.
+          yield* moveToOsTrash(nodePath).pipe(Effect.catchAll(() => Effect.void));
         }
       }
 
@@ -611,7 +592,10 @@ export const writeNodeContent = (
   projectDir: string,
   nodeId: string,
   body: string,
-): Effect.Effect<string, InvalidNodeId | UnknownNode | LockTimeout | IoError> => {
+): Effect.Effect<
+  string,
+  InvalidNodeId | UnknownNode | InvalidProject | LockTimeout | IoError
+> => {
   if (!SAFE_NODE_ID.test(nodeId)) {
     return Effect.fail(new InvalidNodeId({ nodeId }));
   }
@@ -619,6 +603,13 @@ export const writeNodeContent = (
   return withProjectLock(
     projectDir,
     Effect.gen(function* () {
+      const existingProject = yield* validateProjectDir(projectDir);
+      if (!existingProject.ok) {
+        return yield* Effect.fail(
+          new InvalidProject({ issues: existingProject.issues }),
+        );
+      }
+
       const graphPath = path.join(projectDir, "plan.graph.json");
       const json = yield* readJson(graphPath);
       const graph = planGraphSchema.parse(json);

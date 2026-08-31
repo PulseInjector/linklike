@@ -18,6 +18,17 @@ test("click selects a card without opening the drawer", async ({ page }) => {
   await selectMapNode(page, "Minimal example");
   await expect(page.locator(".drawer")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Add" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Delete" })).toHaveCount(0);
+});
+
+test("delete is unavailable when it would remove every node", async ({ page }) => {
+  const projectDir = await copyTwoNodeProject();
+  await openProject(page, projectDir);
+
+  await selectMapNode(page, "Minimal example");
+  await expect(page.getByRole("button", { name: "Delete" })).toHaveCount(0);
+
+  await selectMapNode(page, "Second topic");
   await expect(page.getByRole("button", { name: "Delete" })).toBeVisible();
 });
 

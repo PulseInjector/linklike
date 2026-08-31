@@ -26,13 +26,17 @@ Usage:
 `);
 }
 
-function parseFlag(args: string[], flag: string): string | undefined {
+function parseFlag(
+  args: string[],
+  flag: string,
+  allowLeadingDashes = false,
+): string | undefined {
   const index = args.indexOf(flag);
   if (index === -1) {
     return undefined;
   }
   const value = args[index + 1];
-  if (value === undefined || value.startsWith("--")) {
+  if (value === undefined || (!allowLeadingDashes && value.startsWith("--"))) {
     throw new Error(`${flag} requires a value`);
   }
   return value;
@@ -161,7 +165,7 @@ async function main(): Promise<void> {
         "usage: linklike node write <directory> <nodeId> [--body <markdown>]",
       );
     }
-    const flagged = parseFlag(rest, "--body");
+    const flagged = parseFlag(rest, "--body", true);
     let body: string;
     if (flagged !== undefined) {
       body = flagged;
